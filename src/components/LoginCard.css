@@ -1,0 +1,104 @@
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: #0c2b36; /* dark blue background like screenshot */
+  font-family: "Poppins", sans-serif;
+}
+
+
+.login-container {
+    
+  width: 1400px;
+  text-align: center;
+  background: linear-gradient(180deg, #0f2b43 0%, #0a2238 100%);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.login-container:hover {
+  transform: translateY(-4px);
+}
+
+.logo {
+  width: 250px;
+  margin-bottom: 10px;
+}
+
+
+
+
+.login-button {
+  background: #45b6fe;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 30px;
+  border-radius: 25px;
+  margin-bottom: 30px;
+  transition: all 0.3s;
+}
+
+.login-button:hover {
+  background: #00aaff;
+  transform: scale(1.05);
+}
+
+.login-options {
+  display: flex;
+  justify-content: center;
+  gap: 40px; /* increase spacing */
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.login-option {
+  background-color: #113b57;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 30px; /* more padding = larger clickable area */
+  width: 200px;  /* increase width */
+  text-align: center;
+  transition: 0.3s ease;
+  cursor: pointer;
+}
+
+.login-option:hover {
+  border-color: #00ffff;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+  transform: translateY(-5px);
+}
+
+.icon {
+  width: 75px;  /* bigger icons */
+  height: 75px;
+  margin-bottom: 15px;
+}
+
+.option-title {
+  font-weight: 600;
+  color: #e2dada;
+}
+
+.option-subtitle {
+  font-size: 10px;
+  color: #e2dada;
+}
+
+.register-text {
+  margin-bottom: 10px;
+  color: #ccc;
+  font-size: 13px;
+}
+
+.error-text {
+  color: #e06c75;
+  font-size: 13px;
+}
+
+.login-option:hover .icon {
+  transform: scale(1.1);
+}
+
