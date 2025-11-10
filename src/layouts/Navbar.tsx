@@ -1,6 +1,6 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import logo from "../assets/asure-logo.png"; // 👈 replace with your logo path
+import logo from "../assets/asure-logo.png";
 
 const Navbar: React.FC = () => {
   return (
@@ -28,16 +28,25 @@ const Navbar: React.FC = () => {
         <span className="navbar-toggler-icon"></span>
       </button>
 
-      <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <div
+        className="collapse navbar-collapse justify-content-end"
+        id="navbarNav"
+      >
         <ul className="navbar-nav">
           <li className="nav-item">
-            <a className="nav-link" href="#">Home</a>
+            <a className="nav-link" href="#">
+              Home
+            </a>
           </li>
           <li className="nav-item">
-            <a className="nav-link" href="#">About</a>
+            <a className="nav-link" href="#">
+              About
+            </a>
           </li>
           <li className="nav-item">
-            <a className="nav-link" href="#">Contact</a>
+            <a className="nav-link" href="#">
+              Contact
+            </a>
           </li>
         </ul>
       </div>

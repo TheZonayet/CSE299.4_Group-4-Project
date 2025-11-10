@@ -1,24 +1,25 @@
 import React, { useState } from "react";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./features/auth/LoginPage";
 import Dashboard from "./pages/Dashboard";
-import Navbar from "./components/Navbar";
+import Navbar from "./layouts/Navbar";
+import "./styles/App.css";
 
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
+  const handleLogin = (u: any) => {
+    setUser(u);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    setUser(null);
   };
 
   return (
     <div>
       <Navbar />
-      {isLoggedIn ? (
-        <Dashboard onLogout={handleLogout} />  // 👈 pass logout handler
+      {user ? (
+        <Dashboard onLogout={handleLogout} user={user} />
       ) : (
         <LoginPage onLogin={handleLogin} />
       )}
