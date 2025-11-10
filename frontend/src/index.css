@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Set background for the whole page */
+body {
+    background-color: #07303E;
+}
