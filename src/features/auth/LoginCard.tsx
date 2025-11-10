@@ -1,9 +1,6 @@
 import React from "react";
 import "./LoginCard.css";
-import logo from "../assets/asure-logo.png";
-
-
-
+import logo from "../../assets/asure-logo.png";
 
 interface LoginOption {
   title: string;
@@ -22,7 +19,6 @@ const LoginCard: React.FC<LoginCardProps> = ({ options, onSelect }) => {
       <img src={logo} alt="Asure Logo" className="logo" />
 
       <br></br>
-      
 
       <button className="login-button">Login As</button>
 
@@ -33,8 +29,7 @@ const LoginCard: React.FC<LoginCardProps> = ({ options, onSelect }) => {
             className="login-option"
             onClick={() => onSelect(opt.title)}
           >
-           
-           <img src={opt.icon} alt={opt.title} className="icon" />
+            <img src={opt.icon} alt={opt.title} className="icon" />
             <p className="option-title">{opt.title}</p>
             <span className="option-subtitle">{opt.subtitle}</span>
           </div>
