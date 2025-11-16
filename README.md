@@ -1,80 +1,95 @@
 # CSE299.4_Group-4-Project
 
-**Project Name:Asure**
+**Project Name: Asure**
 
 **Simulated Blockchain-based Verification System**
 
+## Description
 
+Asure solves real-world authenticity problems: certificate verification, medicine authenticity, and product legitimacy. Issuers (educational institutes, tutorial institutes, medicine companies) register and publish verified records. Each asset links to a QR code and can be validated via on-chain logic (future scope). Current stack builds a secure off-chain backed API layer ready for blockchain integration.
 
-**Description:**
+Tech Stack: Solidity (planned), React.js (Vite), Node.js + Express, MongoDB, HTML/CSS/Bootstrap.
 
+## Current Backend Auth Model
 
-It will solve a real-world problem: Certificates Verification, Medicine Authenticity Verification, Product Authenticity Verification . We will build a system where:
-Universities, institutes, companies issue certificates or Authenticity check reports on the blockchain.Products, medicines or certificates will link through a QR code.Employers and users  can instantly verify authenticity online.
-Asure developed using Solidity, JavaScript(React.js), Node.js + Express, MongoDB (NoSQL), HTML, CSS & Bootstrap. We will offer users a platform for verifying authenticity. With an user interface, users will experience smooth navigation and enhanced usability. The application will include BlockChain operations for secure user information storage and settings. Additionally, file operations will handle tasks like verification updates. 
- 
-**Planned App Features:**
+Users stored with role-specific profile fields and an `auth` object:
 
+```jsonc
+{
+  "id": "uuid",
+  "role": "EDUCATION | PERSONAL | TUTORIALS | MEDICINE",
+  "auth": { "email": "string", "passwordHash": "bcrypt" },
+  "profile": {
+    /* role-specific fields */
+  },
+  "verificationCredits": 100,
+  "createdAt": "ISO date"
+}
+```
 
+### Role Registration Fields
 
-**User Registration:**
+- EDUCATION: `instituteName`, `officialPhone`, `eiinNumber`, `officialEmail`, `password`, `confirmPassword`
+- PERSONAL: `email`, `password`, `confirmPassword`
+- TUTORIALS: `instituteName`, `officialPhone`, `govtLicenseNumber`, `officialEmail`, `password`, `confirmPassword`
+- MEDICINE: `companyName`, `officialPhone`, `govtLicenseNumber`, `officialEmail`, `password`, `confirmPassword`
 
+Login uses role + email field (PERSONAL uses `email`, others use `officialEmail`) + password.
 
-Allow users to create accounts by providing institutional information or personal details.
+## Environment Variables (`server/.env`)
 
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017
+DB_NAME=asure
+PORT=4000
+JWT_SECRET=replace_this_with_a_long_random_string
+JWT_EXPIRES_IN=2h
+```
 
+Change `JWT_SECRET` to a long random value in production.
 
-**Blockchain-Backed QR Codes:**
+## API Endpoints (Implemented)
 
- 
- Every certificate, product, or medicine gets a unique QR code linked directly to its blockchain record — impossible to fake or duplicate.
+- `POST /api/register` – role-specific registration.
+- `POST /api/login` – returns `{ user, token }`.
+- `GET /api/me` – requires `Authorization: Bearer <token>`.
+- `GET /api/ping` – health check.
 
+## Planned Endpoints (Next)
 
+- `GET /api/profile`, `PUT /api/profile`
+- `POST /api/verify` – create verification record, decrement credits.
+- `GET /api/verification-history`
+- `GET /api/verification-limits`
 
-**Dynamic Authenticity Updates:**
+## Frontend (Upcoming Work)
 
- 
- If an issuer revokes or reissues a document, the change automatically reflects in real-time on the blockchain.
+Implement React Router pages: Login, Register, Home (verification actions), Profile, History. Add reusable components: Sidebar, StatusBar, BackButton, BigActionButton.
 
+## Setup
 
- 
-**Multi-Signature Verification:**
+```bash
+# Backend
+cd server
+npm install
+npm run dev
 
- 
- High-value certificates or reports require multiple institutional approvals before becoming valid, ensuring extra trust.
+# Frontend (root)
+npm install
+npm run dev
+```
 
+## Security Notes
 
+- Replace default `JWT_SECRET`.
+- Consider enabling HTTPS and CORS origin restrictions.
+- Future: integrate blockchain writes + signature verification / QR code hashing.
 
-**NFT Certificates:**
+## Future Features (Blockchain Scope)
 
- 
- Each verified certificate can be minted as an NFT, proving digital ownership and transfer history on-chain.
-Tamper Detection Alerts
- Instantly alerts users if a certificate, product, or QR code hash doesn’t match the original blockchain record.
+- NFT minting of certificates.
+- Multi-signature approval flows.
+- Tamper detection & crowd reporting.
+- Geo-verification analytics & AI forgery scan.
 
-
-**Reputation Scoring for Issuers:**
-
- 
- Institutions and companies earn a blockchain-based “Trust Score” based on their verification history and reliability.
-
-
-**Crowd-Verified Reporting System:**
-
- 
- Users can report suspicious or fake certificates/products, helping others avoid fraud and improving system transparency.
-
-
-**Geo-Verification Map:**
-
- 
- Tracks where verification scans happen, helping detect counterfeit hotspots (useful for medicine & product tracking).
-
-
-**AI-Powered Fake Detection:**
-
-
- Before blockchain verification, AI scans uploaded documents or product images for tampering or forgery signs
-
-
-
+This README reflects the updated authentication layer and environment configuration.

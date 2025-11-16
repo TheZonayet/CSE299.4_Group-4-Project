@@ -1,0 +1,53 @@
+.big-action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 180px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 16px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.big-action-button:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.big-action-button:active:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.big-action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.big-action-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.big-action-content {
+  width: 100%;
+}
+
+.big-action-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: white;
+}
+
+.big-action-subtitle {
+  font-size: 0.95rem;
+  margin: 0;
+  opacity: 0.9;
+  color: white;
+}

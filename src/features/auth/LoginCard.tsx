@@ -1,6 +1,6 @@
 import React from "react";
 import "./LoginCard.css";
-import logo from "../../assets/asure-logo.png";
+import logo from "../../assets/Website logo.png";
 
 interface LoginOption {
   title: string;
