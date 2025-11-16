@@ -1,14 +1,13 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import LoginCard from "./LoginCard";
-import medicineIcon from "../../assets/medicine.png";
-import educationIcon from "../../assets/education.png";
-import tutorialsIcon from "../../assets/tutorials.png";
-import personalIcon from "../../assets/personal.png";
-interface LoginPageProps {
-  onLogin: (user: any) => void; // 👈 receive login handler from App.tsx
-}
+import medicineIcon from "../../assets/medicine button.png";
+import educationIcon from "../../assets/education button.png";
+import tutorialsIcon from "../../assets/tutorials button.png";
+import personalIcon from "../../assets/personal button.png";
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [selected, setSelected] = React.useState<string | null>(null);
   const [showAuthForm, setShowAuthForm] = React.useState(false);
 
@@ -28,13 +27,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setShowAuthForm(true);
   };
 
+  const handleSuccess = () => {
+    navigate("/home");
+  };
+
   if (showAuthForm && selected) {
     const AuthForm = React.lazy(() => import("./AuthForm"));
     return (
       <React.Suspense fallback={<div className="p-4">Loading...</div>}>
         <AuthForm
           role={selected}
-          onSuccess={onLogin}
+          onSuccess={handleSuccess}
           onBack={() => {
             setShowAuthForm(false);
             setSelected(null);

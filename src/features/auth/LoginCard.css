@@ -93,6 +93,10 @@ body, html, #root {
   font-size: 13px;
 }
 
+.auth-card {
+  max-width: 500px;
+}
+
 .error-text {
   color: #e06c75;
   font-size: 13px;
