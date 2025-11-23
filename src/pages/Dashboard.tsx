@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getProfile, clearToken } from "../services/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Dashboard.css";
+import { Outlet } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();

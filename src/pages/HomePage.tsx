@@ -1,86 +1,87 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getProfile } from "../services/api";
 import Sidebar from "../components/Sidebar";
 import StatusBar from "../components/StatusBar";
 import BigActionButton from "../components/BigActionButton";
-import { createVerification } from "../services/api";
+import BackButton from "../components/BackButton";
 import "./HomePage.css";
 
 const HomePage: React.FC = () => {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleVerification = async (type: string, title: string) => {
-    setLoading(type);
-    setMessage(null);
-
-    try {
-      const result = await createVerification(type, {
-        timestamp: new Date().toISOString(),
+  useEffect(() => {
+    // Redirect to role-specific dashboard if user is an institute or company
+    getProfile()
+      .then((data) => {
+        setUser(data.user);
+        const role = data.user?.role?.toUpperCase();
+        
+        // Redirect based on role (backend uses EDUCATION, MEDICINE, TUTORIALS)
+        if (role === "EDUCATION") {
+          navigate("/education-dashboard", { replace: true });
+        } else if (role === "MEDICINE") {
+          navigate("/medicine-dashboard", { replace: true });
+        } else if (role === "TUTORIALS") {
+          navigate("/tutorial-dashboard", { replace: true });
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        navigate("/login");
       });
-      setMessage(
-        `✅ ${title} verified successfully! ID: ${result.verification.id}`
-      );
-    } catch (err: any) {
-      setMessage(`❌ ${err.message || "Verification failed"}`);
-    } finally {
-      setLoading(null);
-    }
-  };
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="home-layout">
       <Sidebar />
       <div className="home-main">
         <StatusBar title="Verification Dashboard" />
+        <BackButton to="/login" label="Logout" />
 
         <div className="home-content">
           <h2 className="home-title">Select Verification Type</h2>
-
-          {message && (
-            <div
-              className={`alert ${
-                message.startsWith("✅") ? "alert-success" : "alert-danger"
-              }`}
-            >
-              {message}
-            </div>
-          )}
 
           <div className="verification-grid">
             <BigActionButton
               title="Verify Educational Institute"
               subtitle="Validate certificates from educational institutions"
               icon="🎓"
-              onClick={() =>
-                handleVerification("educational", "Educational Institute")
-              }
-              disabled={loading !== null}
+              onClick={() => navigate("/verify-education")}
             />
 
             <BigActionButton
               title="Verify Medicines"
               subtitle="Check authenticity of pharmaceutical products"
               icon="💊"
-              onClick={() => handleVerification("medicine", "Medicine")}
-              disabled={loading !== null}
+              onClick={() => navigate("/verify-medicine")}
             />
 
             <BigActionButton
               title="Verify Random Products"
               subtitle="Authenticate any product via QR code"
               icon="📦"
-              onClick={() => handleVerification("product", "Product")}
-              disabled={loading !== null}
+              onClick={() => navigate("/verify-product")}
             />
 
             <BigActionButton
               title="Verify Tutorial Certificate"
               subtitle="Validate tutorial institute certificates"
               icon="📜"
-              onClick={() =>
-                handleVerification("tutorial", "Tutorial Certificate")
-              }
-              disabled={loading !== null}
+              onClick={() => navigate("/verify-tutorial")}
             />
           </div>
         </div>

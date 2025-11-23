@@ -20,7 +20,10 @@ const LoginCard: React.FC<LoginCardProps> = ({ options, onSelect }) => {
 
       <br></br>
 
-      <button className="login-button">Login As</button>
+      <div className="login">
+       <h1>Login/Register As</h1>
+        </div>
+        
 
       <div className="login-options">
         {options.map((opt) => (
@@ -36,13 +39,7 @@ const LoginCard: React.FC<LoginCardProps> = ({ options, onSelect }) => {
         ))}
       </div>
 
-      <p className="register-text">
-        Don’t have an account? <a href="#">Register here!</a>
-      </p>
-
-      <p className="error-text">
-        Validation errors / Exceptions will be displayed here
-      </p>
+    
     </div>
   );
 };

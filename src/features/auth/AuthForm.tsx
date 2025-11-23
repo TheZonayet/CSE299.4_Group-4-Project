@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { loginUser, registerUser } from "../../services/api";
+import "./AuthForm.css";
 
 interface AuthFormProps {
   role: string;
@@ -140,13 +141,23 @@ const AuthForm: React.FC<AuthFormProps> = ({ role, onSuccess, onBack }) => {
       <div className="card mx-auto auth-card">
         <div className="card-body">
           <button className="btn btn-link text-primary p-0" onClick={onBack}>
-            ← Back
+            <img
+              src="src\assets\back-icon.jpg"
+              width="30px"
+              height="30px"
+              alt="Back"
+            />
           </button>
           <h5 className="card-title mt-2">
-            {role} — {mode === "login" ? "Login" : "Register"}
+            {role} —{" "}
+            {mode === "login" ? (
+              <button>Login</button>
+            ) : (
+              <button>Register</button>
+            )}
           </h5>
 
-          <div className="mb-3 mt-3">
+          <div className="mb-3 mt-3 auth-form-toggle">
             <div className="btn-group w-100" role="group">
               <button
                 type="button"
@@ -159,7 +170,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ role, onSuccess, onBack }) => {
                   setError(null);
                 }}
               >
-                Login
+                <b>Login</b>
               </button>
               <button
                 type="button"
@@ -172,7 +183,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ role, onSuccess, onBack }) => {
                   setError(null);
                 }}
               >
-                Register
+                <b>Register</b>
               </button>
             </div>
           </div>

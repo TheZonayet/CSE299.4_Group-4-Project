@@ -4,21 +4,14 @@ import "./BackButton.css";
 
 interface BackButtonProps {
   to?: string;
-  onClick?: () => void;
-  className?: string;
+  label?: string;
 }
 
-const BackButton: React.FC<BackButtonProps> = ({
-  to,
-  onClick,
-  className = "",
-}) => {
+const BackButton: React.FC<BackButtonProps> = ({ to, label = "Back" }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (to) {
+    if (to) {
       navigate(to);
     } else {
       navigate(-1);
@@ -26,11 +19,9 @@ const BackButton: React.FC<BackButtonProps> = ({
   };
 
   return (
-    <button
-      className={`back-button btn btn-link ${className}`}
-      onClick={handleClick}
-    >
-      ← Back
+    <button onClick={handleClick} className="back-button" aria-label={label}>
+      <span className="back-icon">←</span>
+      <span>{label}</span>
     </button>
   );
 };
