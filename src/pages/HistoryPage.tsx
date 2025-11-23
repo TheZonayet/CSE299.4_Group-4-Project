@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import StatusBar from "../components/StatusBar";
+import BackButton from "../components/BackButton";
 import { getVerificationHistory } from "../services/api";
 import "./HistoryPage.css";
 
@@ -56,6 +57,7 @@ const HistoryPage: React.FC = () => {
       <Sidebar />
       <div className="history-main">
         <StatusBar title="Verification History" />
+        <BackButton to="/home" label="Back" />
 
         <div className="history-content">
           <div className="history-header">

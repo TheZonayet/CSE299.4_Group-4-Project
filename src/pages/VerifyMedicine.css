@@ -1,0 +1,166 @@
+.verify-layout {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.verify-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.verify-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  min-height: calc(100vh - 12rem);
+}
+
+.patient-form {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+}
+
+.patient-form h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.patient-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.patient-form textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.suggestion-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.3s;
+}
+
+.suggestion-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
+
+.ai-suggestion {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  border-left: 4px solid #4caf50;
+}
+
+.ai-suggestion.not-recommended {
+  border-left-color: #ff9800;
+}
+
+.ai-suggestion h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.suggestion-section {
+  margin: 1rem 0;
+}
+
+.suggestion-section h4 {
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.suggestion-section ul {
+  list-style-position: inside;
+  color: #666;
+}
+
+.suggestion-section.warnings {
+  background: #fff3e0;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #ff9800;
+}
+
+.alternatives {
+  margin-top: 1.5rem;
+}
+
+.alternatives h4 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.alternative-card {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 3px solid #667eea;
+}
+
+.alternative-card h5 {
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.alt-price {
+  color: #4caf50;
+  font-weight: 600;
+  margin: 0.25rem 0;
+}
+
+.alt-reason {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.side-effects {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fff3e0;
+  border-radius: 8px;
+}
+
+.side-effects h4 {
+  color: #ff9800;
+  margin-bottom: 0.5rem;
+}
+
+.side-effects ul {
+  color: #666;
+  list-style-position: inside;
+}
+
+@media (max-width: 768px) {
+  .verify-main {
+    padding: 1rem;
+  }
+
+  .verify-content {
+    padding: 1rem;
+  }
+}

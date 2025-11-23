@@ -1,49 +1,22 @@
-import { MongoClient } from 'mongodb';
+// DB connection functions moved to db.js to avoid circular dependency
+import { connectDB, getDB } from './db.js';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import 'dotenv/config';
+import educationRoutes from './routes/educationRoutes.js';
+import medicineRoutes from './routes/medicineRoutes.js';
+import tutorialRoutes from './routes/tutorialRoutes.js';
+import productRoutes from './routes/productRoutes.js';
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const dbName = process.env.DB_NAME || 'asure';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-insecure-secret-change-me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '2h';
 
-let client;
-let db;
-
-export async function connectDB() {
-  if (db) return db;
-  
-  try {
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db(dbName);
-    
-    // Create indexes (email unique – role-specific fields stored under profile)
-    await db.collection('users').createIndex({ 'auth.email': 1 }, { unique: true });
-    
-    console.log('✅ Connected to MongoDB');
-    return db;
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
-  }
-}
-
-export function getDB() {
-  if (!db) throw new Error('Database not initialized. Call connectDB() first.');
-  return db;
-}
-
-export async function closeDB() {
-  if (client) {
-    await client.close();
-    console.log('🔌 Database connection closed');
-  }
-}
+// uri/dbName retained for potential logging only
 
 const app = express();
 app.use(cors());
@@ -76,6 +49,12 @@ function authMiddleware(req, res, next) {
 }
 
 app.get('/api/ping', (req, res) => res.send('pong'));
+
+// Mount modular domain routes (protected)
+app.use('/api/education', authMiddleware, educationRoutes);
+app.use('/api/medicine', authMiddleware, medicineRoutes);
+app.use('/api/tutorial', authMiddleware, tutorialRoutes);
+app.use('/api/product', authMiddleware, productRoutes);
 
 // Helper: required fields per role (excluding password & confirmPassword which are universal)
 const ROLE_FIELDS = {
@@ -291,6 +270,263 @@ app.get('/api/verification-limits', authMiddleware, wrapAsync(async (req, res) =
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   return res.json({ credits: user.verificationCredits || 0 });
+}));
+
+// Educational Certificate Verification
+app.post('/api/verify-education', authMiddleware, wrapAsync(async (req, res) => {
+  const { rollNumber, instituteId } = req.body;
+  
+  if (!rollNumber || !instituteId) {
+    return res.status(400).json({ error: 'Roll number and institute ID are required' });
+  }
+
+  const db = getDB();
+  const certificatesCollection = db.collection('educational_certificates');
+  
+  // Mock verification - in production, search database
+  const certificate = await certificatesCollection.findOne({ rollNumber, instituteId });
+  
+  if (certificate) {
+    return res.json({
+      success: true,
+      message: 'Certificate verified successfully',
+      data: {
+        instituteName: certificate.instituteName || 'Sample Institute',
+        studentName: certificate.studentName || 'John Doe',
+        degree: certificate.degree || 'Bachelor of Science',
+        cgpa: certificate.cgpa || '3.75',
+        passingYear: certificate.passingYear || '2023',
+        rollNumber: certificate.rollNumber,
+        isAuthentic: true
+      }
+    });
+  } else {
+    return res.json({
+      success: false,
+      message: 'Certificate not found in database',
+      data: { isAuthentic: false }
+    });
+  }
+}));
+
+app.post('/api/verify-education-image', authMiddleware, wrapAsync(async (req, res) => {
+  const { imageData } = req.body;
+  
+  if (!imageData) {
+    return res.status(400).json({ error: 'Image data is required' });
+  }
+
+  // Mock AI OCR response - in production, integrate with OCR API
+  const mockExtractedData = {
+    instituteName: 'AI Detected Institute',
+    studentName: 'AI Detected Name',
+    degree: 'Bachelor of Engineering',
+    cgpa: '3.85',
+    passingYear: '2024',
+    rollNumber: 'AI-' + Math.floor(Math.random() * 10000),
+    isAuthentic: true
+  };
+
+  return res.json({
+    success: true,
+    message: 'Certificate analyzed successfully via AI',
+    data: mockExtractedData
+  });
+}));
+
+// Medicine Verification
+app.post('/api/verify-medicine', authMiddleware, wrapAsync(async (req, res) => {
+  const { medicineName, medicineCode } = req.body;
+  
+  if (!medicineName && !medicineCode) {
+    return res.status(400).json({ error: 'Medicine name or code is required' });
+  }
+
+  const db = getDB();
+  const medicinesCollection = db.collection('medicines');
+  
+  const query = medicineCode 
+    ? { code: medicineCode }
+    : { name: new RegExp(medicineName, 'i') };
+  
+  const medicine = await medicinesCollection.findOne(query);
+  
+  if (medicine) {
+    return res.json({
+      success: true,
+      message: 'Medicine verified successfully',
+      data: {
+        name: medicine.name || 'Sample Medicine',
+        manufacturer: medicine.manufacturer || 'Pharma Corp',
+        batchNumber: medicine.batchNumber || 'BATCH-2024-001',
+        expiryDate: medicine.expiryDate || '2026-12-31',
+        isAuthentic: true,
+        price: medicine.price || '$25.00'
+      }
+    });
+  } else {
+    return res.json({
+      success: false,
+      message: 'Medicine not found in database',
+      data: { isAuthentic: false }
+    });
+  }
+}));
+
+app.post('/api/verify-medicine-image', authMiddleware, wrapAsync(async (req, res) => {
+  const { imageData } = req.body;
+  
+  if (!imageData) {
+    return res.status(400).json({ error: 'Image data is required' });
+  }
+
+  // Mock AI response
+  const mockMedicine = {
+    name: 'AI Detected Medicine',
+    manufacturer: 'AI Pharma',
+    batchNumber: 'AI-BATCH-' + Math.floor(Math.random() * 1000),
+    expiryDate: '2026-06-30',
+    isAuthentic: true,
+    price: '$' + (Math.random() * 50 + 10).toFixed(2)
+  };
+
+  return res.json({
+    success: true,
+    message: 'Medicine analyzed successfully via AI',
+    data: mockMedicine
+  });
+}));
+
+app.post('/api/medicine-suggestion', authMiddleware, wrapAsync(async (req, res) => {
+  const { medicineName, patientData } = req.body;
+  
+  if (!medicineName || !patientData) {
+    return res.status(400).json({ error: 'Medicine name and patient data are required' });
+  }
+
+  // Mock AI suggestion based on patient data
+  const mockSuggestion = {
+    recommendedDosage: `Based on age ${patientData.age} and weight ${patientData.weight}kg: Take 2 tablets daily`,
+    suitability: 'Suitable for patient profile',
+    warnings: patientData.allergies ? `Warning: Patient has allergies to ${patientData.allergies}` : 'No known conflicts',
+    alternatives: [
+      { name: 'Alternative Medicine A', price: '$20.00', availability: 'In Stock' },
+      { name: 'Alternative Medicine B', price: '$18.50', availability: 'In Stock' }
+    ]
+  };
+
+  return res.json({
+    success: true,
+    message: 'AI suggestion generated successfully',
+    data: mockSuggestion
+  });
+}));
+
+// Product Verification
+app.post('/api/verify-product', authMiddleware, wrapAsync(async (req, res) => {
+  const { barcode, imageData } = req.body;
+  
+  if (!barcode && !imageData) {
+    return res.status(400).json({ error: 'Barcode or image data is required' });
+  }
+
+  const db = getDB();
+  const productsCollection = db.collection('products');
+  
+  let product;
+  if (barcode) {
+    product = await productsCollection.findOne({ barcode });
+  }
+
+  if (product) {
+    return res.json({
+      success: true,
+      message: 'Product verified successfully',
+      data: {
+        name: product.name || 'Sample Product',
+        manufacturer: product.manufacturer || 'Product Corp',
+        barcode: product.barcode,
+        isAuthentic: true,
+        price: product.price || '$49.99',
+        similarProducts: [
+          { name: 'Similar Product A', price: '$45.00', rating: 4.5 },
+          { name: 'Similar Product B', price: '$52.00', rating: 4.7 }
+        ]
+      }
+    });
+  } else {
+    // Mock web search result
+    return res.json({
+      success: true,
+      message: 'Product found via web search',
+      data: {
+        name: 'Product from Web',
+        manufacturer: 'Various Sellers',
+        barcode: barcode || 'UNKNOWN',
+        isAuthentic: false,
+        price: '$' + (Math.random() * 100 + 20).toFixed(2),
+        similarProducts: [
+          { name: 'Web Similar A', price: '$35.00', rating: 4.2 },
+          { name: 'Web Similar B', price: '$40.00', rating: 4.4 }
+        ]
+      }
+    });
+  }
+}));
+
+// Tutorial Certificate Verification
+app.post('/api/verify-tutorial', authMiddleware, wrapAsync(async (req, res) => {
+  const { certificateId, imageData } = req.body;
+  
+  if (!certificateId && !imageData) {
+    return res.status(400).json({ error: 'Certificate ID or image data is required' });
+  }
+
+  const db = getDB();
+  const tutorialCertificatesCollection = db.collection('tutorial_certificates');
+  
+  let certificate;
+  if (certificateId) {
+    certificate = await tutorialCertificatesCollection.findOne({ certificateId });
+  }
+
+  if (certificate || imageData) {
+    const extractedSkills = imageData 
+      ? ['JavaScript', 'React', 'Node.js', 'MongoDB'] // Mock AI extraction
+      : (certificate?.skills || ['Programming', 'Web Development']);
+
+    return res.json({
+      success: true,
+      message: 'Certificate verified successfully',
+      data: {
+        instituteName: certificate?.instituteName || 'AI Tutorial Institute',
+        studentName: certificate?.studentName || 'AI Detected Student',
+        courseName: certificate?.courseName || 'Full Stack Development',
+        completionDate: certificate?.completionDate || '2024-11-15',
+        certificateId: certificateId || 'AI-CERT-' + Math.floor(Math.random() * 10000),
+        isAuthentic: certificate ? true : false,
+        skills: extractedSkills,
+        youtubeRecommendations: [
+          {
+            title: `${extractedSkills[0]} Tutorial for Beginners`,
+            channel: 'Programming Academy',
+            url: `https://youtube.com/watch?v=demo${Math.floor(Math.random() * 1000)}`
+          },
+          {
+            title: `Advanced ${extractedSkills[1] || 'Programming'} Course`,
+            channel: 'Tech Tutorials',
+            url: `https://youtube.com/watch?v=demo${Math.floor(Math.random() * 1000)}`
+          }
+        ]
+      }
+    });
+  } else {
+    return res.json({
+      success: false,
+      message: 'Certificate not found in database',
+      data: { isAuthentic: false }
+    });
+  }
 }));
 
 // Global error handler
