@@ -12,7 +12,9 @@ const EnterCertificate: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: string; text: string } | null>(
+    null
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -25,7 +27,7 @@ const EnterCertificate: React.FC = () => {
     passingYear: "",
     department: "",
     instituteName: "",
-    eiinNumber: ""
+    eiinNumber: "",
   });
 
   useEffect(() => {
@@ -36,7 +38,7 @@ const EnterCertificate: React.FC = () => {
         setFormData((prev) => ({
           ...prev,
           instituteName: data.user?.profile?.instituteName || "",
-          eiinNumber: data.user?.profile?.eiinNumber || ""
+          eiinNumber: data.user?.profile?.eiinNumber || "",
         }));
         setLoading(false);
       })
@@ -45,7 +47,9 @@ const EnterCertificate: React.FC = () => {
       });
   }, [navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -68,31 +72,37 @@ const EnterCertificate: React.FC = () => {
     setMessage(null);
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:3001/api/education/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          rollNumber: formData.rollNumber,
-          instituteId: user?.profile?.instituteId || "UNKNOWN",
-          studentName: formData.studentName,
-          degree: formData.degree,
-          cgpa: formData.cgpaOrGpa,
-          passingYear: formData.passingYear,
-          department: formData.department,
-          instituteName: formData.instituteName,
-          eiinNumber: formData.eiinNumber,
-          idNumber: formData.idNumber
-        })
-      });
+      const token = localStorage.getItem("asure_token");
+      const response = await fetch(
+        "http://localhost:4000/api/education/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            rollNumber: formData.rollNumber,
+            instituteId: user?.profile?.instituteId || "UNKNOWN",
+            studentName: formData.studentName,
+            degree: formData.degree,
+            cgpa: formData.cgpaOrGpa,
+            passingYear: formData.passingYear,
+            department: formData.department,
+            instituteName: formData.instituteName,
+            eiinNumber: formData.eiinNumber,
+            idNumber: formData.idNumber,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Certificate added successfully!" });
+        setMessage({
+          type: "success",
+          text: "Certificate added successfully!",
+        });
         // Reset form except auto-filled fields
         setFormData({
           rollNumber: "",
@@ -103,17 +113,20 @@ const EnterCertificate: React.FC = () => {
           passingYear: "",
           department: "",
           instituteName: formData.instituteName,
-          eiinNumber: formData.eiinNumber
+          eiinNumber: formData.eiinNumber,
         });
         setImageFile(null);
         setImagePreview(null);
-        
+
         // Redirect back to dashboard after 2 seconds
         setTimeout(() => {
           navigate("/education-dashboard");
         }, 2000);
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to add certificate" });
+        setMessage({
+          type: "error",
+          text: data.error || "Failed to add certificate",
+        });
       }
     } catch (error) {
       setMessage({ type: "error", text: "Network error occurred" });
@@ -143,14 +156,20 @@ const EnterCertificate: React.FC = () => {
           <h2 className="form-title">🎓 Add New Educational Certificate</h2>
 
           {message && (
-            <div className={`alert alert-${message.type === "success" ? "success" : "danger"} alert-container`}>
+            <div
+              className={`alert alert-${
+                message.type === "success" ? "success" : "danger"
+              } alert-container`}
+            >
               {message.text}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="form-container">
             <div className="mb-3">
-              <label htmlFor="rollNumber" className="form-label">Roll Number *</label>
+              <label htmlFor="rollNumber" className="form-label">
+                Roll Number *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -163,7 +182,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="idNumber" className="form-label">ID Number *</label>
+              <label htmlFor="idNumber" className="form-label">
+                ID Number *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -176,7 +197,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="studentName" className="form-label">Student Name *</label>
+              <label htmlFor="studentName" className="form-label">
+                Student Name *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -189,7 +212,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="degree" className="form-label">Degree *</label>
+              <label htmlFor="degree" className="form-label">
+                Degree *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -203,7 +228,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="cgpaOrGpa" className="form-label">CGPA or GPA *</label>
+              <label htmlFor="cgpaOrGpa" className="form-label">
+                CGPA or GPA *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -217,7 +244,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="passingYear" className="form-label">Passing Year *</label>
+              <label htmlFor="passingYear" className="form-label">
+                Passing Year *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -231,7 +260,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="department" className="form-label">Department or Group</label>
+              <label htmlFor="department" className="form-label">
+                Department or Group
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -244,7 +275,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="instituteName" className="form-label">Institute Name (Auto-filled)</label>
+              <label htmlFor="instituteName" className="form-label">
+                Institute Name (Auto-filled)
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -257,7 +290,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="eiinNumber" className="form-label">EIIN Number (Auto-filled)</label>
+              <label htmlFor="eiinNumber" className="form-label">
+                EIIN Number (Auto-filled)
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -270,7 +305,9 @@ const EnterCertificate: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="imageUpload" className="form-label">Upload Certificate Image (PNG)</label>
+              <label htmlFor="imageUpload" className="form-label">
+                Upload Certificate Image (PNG)
+              </label>
               <input
                 type="file"
                 className="form-control"
@@ -280,12 +317,20 @@ const EnterCertificate: React.FC = () => {
               />
               {imagePreview && (
                 <div className="mt-2">
-                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="image-preview"
+                  />
                 </div>
               )}
             </div>
 
-            <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+            <button
+              type="submit"
+              className="btn btn-primary w-100"
+              disabled={submitting}
+            >
               {submitting ? "Saving..." : "Save Certificate"}
             </button>
           </form>

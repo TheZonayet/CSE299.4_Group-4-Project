@@ -8,12 +8,19 @@ import "./VerifyMedicine.css";
 interface MedicineInfo {
   isAuthentic: boolean;
   medicineName?: string;
+  medicineCode?: string;
   companyName?: string;
+  manufacturer?: string;
   genericName?: string;
   dosage?: string;
+  power?: string;
+  description?: string;
   sideEffects?: string[];
   price?: string;
   expiryDate?: string;
+  batchNumber?: string;
+  message?: string;
+  aiAnalysis?: any;
 }
 
 interface PatientData {
@@ -25,14 +32,8 @@ interface PatientData {
 }
 
 interface AISuggestion {
-  isRecommended: boolean;
-  reasons?: string[];
-  warnings?: string[];
-  alternatives?: Array<{
-    name: string;
-    price: string;
-    reason: string;
-  }>;
+  suggestion: string;
+  timestamp?: string;
 }
 
 const VerifyMedicine: React.FC = () => {
@@ -76,12 +77,12 @@ const VerifyMedicine: React.FC = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/medicine/verify",
+        "http://localhost:4000/api/medicine/verify",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
           },
           body: JSON.stringify({ medicineName, medicineCode }),
         }
@@ -91,11 +92,16 @@ const VerifyMedicine: React.FC = () => {
       if (result.success && result.data) {
         setMedicineInfo({
           isAuthentic: result.data.isAuthentic,
-          medicineName: result.data.name,
+          medicineName: result.data.name || result.data.medicineName,
+          medicineCode: result.data.code || result.data.medicineCode,
           companyName: result.data.manufacturer,
+          manufacturer: result.data.manufacturer,
           dosage: result.data.power,
+          power: result.data.power,
+          genericName: result.data.genericName,
           price: result.data.price,
           expiryDate: result.data.expiryDate,
+          description: result.data.description,
         });
       } else {
         setMedicineInfo({ isAuthentic: false });
@@ -116,26 +122,42 @@ const VerifyMedicine: React.FC = () => {
     setMedicineInfo(null);
 
     try {
-      const formData = new FormData();
-      formData.append("medicineImage", uploadedImage);
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(uploadedImage);
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/verify-medicine-image`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
-          },
-          body: formData,
+        const response = await fetch(
+          "http://localhost:4000/api/ai/analyze-medicine",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
+            },
+            body: JSON.stringify({ image: base64Image }),
+          }
+        );
+
+        const result = await response.json();
+        if (result.success && result.data.analysis) {
+          setMedicineInfo({
+            isAuthentic: true,
+            message: result.data.analysis,
+            aiAnalysis: result.data,
+          });
+        } else {
+          setMedicineInfo({
+            isAuthentic: false,
+            message: result.data?.analysis || "Could not read medicine information from image",
+          });
         }
-      );
-
-      const data = await response.json();
-      setMedicineInfo(data);
+        setLoading(false);
+      };
     } catch (error) {
       console.error("Image verification error:", error);
-      setMedicineInfo({ isAuthentic: false });
-    } finally {
+      setMedicineInfo({ isAuthentic: false, message: "Verification failed" });
       setLoading(false);
     }
   };
@@ -147,7 +169,7 @@ const VerifyMedicine: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/medicine-suggestion`,
+        "http://localhost:4000/api/ai/medicine-suggestion",
         {
           method: "POST",
           headers: {
@@ -161,10 +183,17 @@ const VerifyMedicine: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      setAiSuggestion(data);
-    } catch (error) {
+      const result = await response.json();
+      console.log("AI Response:", result);
+      if (result.success) {
+        setAiSuggestion(result.data);
+      } else {
+        console.error("Failed to get AI suggestion:", result.message);
+        alert(`AI Error: ${result.message || "Unknown error"}`);
+      }
+    } catch (error: any) {
       console.error("AI suggestion error:", error);
+      alert(`Request failed: ${error.message || "Network error"}`);
     } finally {
       setLoadingSuggestion(false);
     }
@@ -320,43 +349,55 @@ const VerifyMedicine: React.FC = () => {
               {medicineInfo.isAuthentic && (
                 <>
                   <div className="result-details">
-                    <div className="detail-row">
-                      <span className="detail-label">Medicine Name:</span>
-                      <span className="detail-value">
-                        {medicineInfo.medicineName}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Company:</span>
-                      <span className="detail-value">
-                        {medicineInfo.companyName}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Generic Name:</span>
-                      <span className="detail-value">
-                        {medicineInfo.genericName}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Dosage:</span>
-                      <span className="detail-value">
-                        {medicineInfo.dosage}
-                      </span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Price:</span>
-                      <span className="detail-value">{medicineInfo.price}</span>
-                    </div>
-                    {medicineInfo.sideEffects && (
-                      <div className="side-effects">
-                        <h4>Side Effects:</h4>
-                        <ul>
-                          {medicineInfo.sideEffects.map((effect, index) => (
-                            <li key={index}>{effect}</li>
-                          ))}
-                        </ul>
+                    {medicineInfo.message && (
+                      <div className="ai-analysis-text">
+                        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                          {medicineInfo.message}
+                        </pre>
                       </div>
+                    )}
+                    
+                    {medicineInfo.medicineName && (
+                      <>
+                        <div className="detail-row">
+                          <span className="detail-label">Medicine Name:</span>
+                          <span className="detail-value">
+                            {medicineInfo.medicineName}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Company:</span>
+                          <span className="detail-value">
+                            {medicineInfo.companyName}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Generic Name:</span>
+                          <span className="detail-value">
+                            {medicineInfo.genericName}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Dosage:</span>
+                          <span className="detail-value">
+                            {medicineInfo.dosage}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Price:</span>
+                          <span className="detail-value">{medicineInfo.price}</span>
+                        </div>
+                        {medicineInfo.sideEffects && (
+                          <div className="side-effects">
+                            <h4>Side Effects:</h4>
+                            <ul>
+                              {medicineInfo.sideEffects.map((effect, index) => (
+                                <li key={index}>{effect}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -459,49 +500,16 @@ const VerifyMedicine: React.FC = () => {
                   )}
 
                   {aiSuggestion && (
-                    <div
-                      className={`ai-suggestion ${
-                        aiSuggestion.isRecommended
-                          ? "recommended"
-                          : "not-recommended"
-                      }`}
-                    >
-                      <h3>
-                        {aiSuggestion.isRecommended
-                          ? "✅ Recommended for Patient"
-                          : "⚠️ Not Recommended"}
-                      </h3>
-                      {aiSuggestion.reasons && (
-                        <div className="suggestion-section">
-                          <h4>Reasons:</h4>
-                          <ul>
-                            {aiSuggestion.reasons.map((reason, index) => (
-                              <li key={index}>{reason}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiSuggestion.warnings &&
-                        aiSuggestion.warnings.length > 0 && (
-                          <div className="suggestion-section warnings">
-                            <h4>⚠️ Warnings:</h4>
-                            <ul>
-                              {aiSuggestion.warnings.map((warning, index) => (
-                                <li key={index}>{warning}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      {aiSuggestion.alternatives && (
-                        <div className="alternatives">
-                          <h4>Alternative Medicines:</h4>
-                          {aiSuggestion.alternatives.map((alt, index) => (
-                            <div key={index} className="alternative-card">
-                              <h5>{alt.name}</h5>
-                              <p className="alt-price">Price: {alt.price}</p>
-                              <p className="alt-reason">{alt.reason}</p>
-                            </div>
-                          ))}
+                    <div className="ai-suggestion">
+                      <h3>🤖 AI Medical Suggestion</h3>
+                      <div className="suggestion-text">
+                        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                          {aiSuggestion.suggestion}
+                        </pre>
+                      </div>
+                      {aiSuggestion.timestamp && (
+                        <div className="suggestion-timestamp">
+                          <small>Generated: {new Date(aiSuggestion.timestamp).toLocaleString()}</small>
                         </div>
                       )}
                     </div>

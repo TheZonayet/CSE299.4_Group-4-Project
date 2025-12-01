@@ -18,7 +18,7 @@ const HomePage: React.FC = () => {
       .then((data) => {
         setUser(data.user);
         const role = data.user?.role?.toUpperCase();
-        
+
         // Redirect based on role (backend uses EDUCATION, MEDICINE, TUTORIALS)
         if (role === "EDUCATION") {
           navigate("/education-dashboard", { replace: true });
