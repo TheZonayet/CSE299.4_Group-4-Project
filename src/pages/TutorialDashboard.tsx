@@ -50,13 +50,16 @@ const TutorialDashboard: React.FC = () => {
       <div className="home-main">
         <StatusBar title="Tutorial Institute Dashboard" />
         <div className="d-flex justify-content-end p-3">
-          <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+          <button className="btn btn-danger" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
         <div className="home-content">
           <h2 className="home-title">Tutorial Institute Actions</h2>
           <p className="text-center mb-4">
-            Welcome, {user?.profile?.instituteName || user?.auth?.email || "Institute"}!
+            Welcome,{" "}
+            {user?.profile?.instituteName || user?.auth?.email || "Institute"}!
           </p>
 
           <div className="verification-grid">

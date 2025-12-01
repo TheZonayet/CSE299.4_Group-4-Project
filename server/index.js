@@ -10,6 +10,7 @@ import educationRoutes from './routes/educationRoutes.js';
 import medicineRoutes from './routes/medicineRoutes.js';
 import tutorialRoutes from './routes/tutorialRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const dbName = process.env.DB_NAME || 'asure';
@@ -55,6 +56,7 @@ app.use('/api/education', authMiddleware, educationRoutes);
 app.use('/api/medicine', authMiddleware, medicineRoutes);
 app.use('/api/tutorial', authMiddleware, tutorialRoutes);
 app.use('/api/product', authMiddleware, productRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
 
 // Helper: required fields per role (excluding password & confirmPassword which are universal)
 const ROLE_FIELDS = {

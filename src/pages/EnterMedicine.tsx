@@ -12,7 +12,9 @@ const EnterMedicine: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: string; text: string } | null>(
+    null
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -24,7 +26,7 @@ const EnterMedicine: React.FC = () => {
     batchNumber: "",
     expiryDate: "",
     price: "",
-    description: ""
+    description: "",
   });
 
   useEffect(() => {
@@ -34,7 +36,7 @@ const EnterMedicine: React.FC = () => {
         // Auto-fill manufacturer information
         setFormData((prev) => ({
           ...prev,
-          manufacturer: data.user?.profile?.companyName || ""
+          manufacturer: data.user?.profile?.companyName || "",
         }));
         setLoading(false);
       })
@@ -43,7 +45,9 @@ const EnterMedicine: React.FC = () => {
       });
   }, [navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -66,24 +70,27 @@ const EnterMedicine: React.FC = () => {
     setMessage(null);
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:3001/api/medicine/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          medicineCode: formData.medicineCode,
-          medicineName: formData.medicineName,
-          power: formData.power,
-          manufacturer: formData.manufacturer,
-          batchNumber: formData.batchNumber,
-          expiryDate: formData.expiryDate,
-          price: formData.price,
-          description: formData.description
-        })
-      });
+      const token = localStorage.getItem("asure_token");
+      const response = await fetch(
+        "http://localhost:4000/api/medicine/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            medicineCode: formData.medicineCode,
+            medicineName: formData.medicineName,
+            power: formData.power,
+            manufacturer: formData.manufacturer,
+            batchNumber: formData.batchNumber,
+            expiryDate: formData.expiryDate,
+            price: formData.price,
+            description: formData.description,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -98,17 +105,20 @@ const EnterMedicine: React.FC = () => {
           batchNumber: "",
           expiryDate: "",
           price: "",
-          description: ""
+          description: "",
         });
         setImageFile(null);
         setImagePreview(null);
-        
+
         // Redirect back to dashboard after 2 seconds
         setTimeout(() => {
           navigate("/medicine-dashboard");
         }, 2000);
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to add medicine" });
+        setMessage({
+          type: "error",
+          text: data.error || "Failed to add medicine",
+        });
       }
     } catch (error) {
       setMessage({ type: "error", text: "Network error occurred" });
@@ -138,14 +148,20 @@ const EnterMedicine: React.FC = () => {
           <h2 className="form-title">💊 Add New Medicine</h2>
 
           {message && (
-            <div className={`alert alert-${message.type === "success" ? "success" : "danger"} alert-container`}>
+            <div
+              className={`alert alert-${
+                message.type === "success" ? "success" : "danger"
+              } alert-container`}
+            >
               {message.text}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="form-container">
             <div className="mb-3">
-              <label htmlFor="medicineName" className="form-label">Medicine Name *</label>
+              <label htmlFor="medicineName" className="form-label">
+                Medicine Name *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -158,7 +174,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="power" className="form-label">Power *</label>
+              <label htmlFor="power" className="form-label">
+                Power *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -172,7 +190,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="medicineCode" className="form-label">Medicine Code *</label>
+              <label htmlFor="medicineCode" className="form-label">
+                Medicine Code *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -185,7 +205,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="manufacturer" className="form-label">Manufacturer Name (Auto-filled)</label>
+              <label htmlFor="manufacturer" className="form-label">
+                Manufacturer Name (Auto-filled)
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -198,7 +220,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="batchNumber" className="form-label">Batch Number *</label>
+              <label htmlFor="batchNumber" className="form-label">
+                Batch Number *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -211,7 +235,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="expiryDate" className="form-label">Expiry Date *</label>
+              <label htmlFor="expiryDate" className="form-label">
+                Expiry Date *
+              </label>
               <input
                 type="date"
                 className="form-control"
@@ -224,7 +250,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="price" className="form-label">Price *</label>
+              <label htmlFor="price" className="form-label">
+                Price *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -238,7 +266,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="description" className="form-label">Description</label>
+              <label htmlFor="description" className="form-label">
+                Description
+              </label>
               <textarea
                 className="form-control"
                 id="description"
@@ -251,7 +281,9 @@ const EnterMedicine: React.FC = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="imageUpload" className="form-label">Upload Medicine Image (PNG)</label>
+              <label htmlFor="imageUpload" className="form-label">
+                Upload Medicine Image (PNG)
+              </label>
               <input
                 type="file"
                 className="form-control"
@@ -261,12 +293,20 @@ const EnterMedicine: React.FC = () => {
               />
               {imagePreview && (
                 <div className="mt-2">
-                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="image-preview"
+                  />
                 </div>
               )}
             </div>
 
-            <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+            <button
+              type="submit"
+              className="btn btn-primary w-100"
+              disabled={submitting}
+            >
               {submitting ? "Saving..." : "Save Medicine"}
             </button>
           </form>

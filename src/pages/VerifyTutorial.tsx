@@ -15,18 +15,26 @@ const VerifyTutorial: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/verify-tutorial`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
-          },
-          body: JSON.stringify({ id }),
-        }
-      );
-      setResult(await res.json());
+      const res = await fetch("http://localhost:4000/api/tutorial/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
+        },
+        body: JSON.stringify({ certificateId: id }),
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        setResult({
+          isAuthentic: result.data.isAuthentic,
+          ...result.data,
+        });
+      } else {
+        setResult({ isAuthentic: false });
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setResult({ isAuthentic: false });
     } finally {
       setLoading(false);
     }
@@ -38,6 +46,48 @@ const VerifyTutorial: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => setImage(reader.result as string);
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageVerification = async () => {
+    if (!image) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost:4000/api/ai/analyze-certificate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
+          },
+          body: JSON.stringify({
+            image: image,
+            certificateType: "tutorial",
+          }),
+        }
+      );
+
+      const aiResult = await response.json();
+      if (aiResult.success && aiResult.data.analysis) {
+        setResult({
+          isAuthentic: true,
+          studentName: "AI Analysis",
+          message: aiResult.data.analysis,
+          aiAnalysis: aiResult.data,
+        });
+      } else {
+        setResult({
+          isAuthentic: false,
+          message: aiResult.data?.analysis || "Could not read certificate information",
+        });
+      }
+    } catch (error) {
+      console.error("Image verification error:", error);
+      setResult({ isAuthentic: false });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,6 +170,16 @@ const VerifyTutorial: React.FC = () => {
                   </div>
                 )}
               </div>
+              {image && (
+                <button
+                  type="button"
+                  className="verify-btn"
+                  onClick={handleImageVerification}
+                  disabled={loading}
+                >
+                  {loading ? "AI is analyzing..." : "Verify with AI"}
+                </button>
+              )}
             </div>
           )}
 
@@ -141,40 +201,53 @@ const VerifyTutorial: React.FC = () => {
               </div>
               {result.isAuthentic && (
                 <div className="result-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Student Name:</span>
-                    <span className="detail-value">{result.studentName}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Institute:</span>
-                    <span className="detail-value">{result.instituteName}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">License Number:</span>
-                    <span className="detail-value">{result.licenseNumber}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Skill:</span>
-                    <span className="detail-value">{result.skill}</span>
-                  </div>
-                  {result.youtubeRecommendations && (
-                    <div className="youtube-section">
-                      <h4>📺 Related YouTube Tutorials:</h4>
-                      {result.youtubeRecommendations.map(
-                        (video: any, i: number) => (
-                          <div key={i} className="youtube-card">
-                            <h5>{video.title}</h5>
-                            <a
-                              href={video.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Watch on YouTube
-                            </a>
-                          </div>
-                        )
-                      )}
+                  {result.message && (
+                    <div className="ai-analysis-text">
+                      <h4>AI Certificate Analysis:</h4>
+                      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                        {result.message}
+                      </pre>
                     </div>
+                  )}
+                  
+                  {result.studentName && !result.message && (
+                    <>
+                      <div className="detail-row">
+                        <span className="detail-label">Student Name:</span>
+                        <span className="detail-value">{result.studentName}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Institute:</span>
+                        <span className="detail-value">{result.instituteName}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">License Number:</span>
+                        <span className="detail-value">{result.licenseNumber}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Skill:</span>
+                        <span className="detail-value">{result.skill}</span>
+                      </div>
+                      {result.youtubeRecommendations && (
+                        <div className="youtube-section">
+                          <h4>📺 Related YouTube Tutorials:</h4>
+                          {result.youtubeRecommendations.map(
+                            (video: any, i: number) => (
+                              <div key={i} className="youtube-card">
+                                <h5>{video.title}</h5>
+                                <a
+                                  href={video.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Watch on YouTube
+                                </a>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

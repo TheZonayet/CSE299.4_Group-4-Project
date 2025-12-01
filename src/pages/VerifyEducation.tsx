@@ -48,19 +48,31 @@ const VerifyEducation: React.FC = () => {
     try {
       // Call backend API to verify with roll and ID
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/verify-education`,
+        "http://localhost:4000/api/education/verify",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
           },
-          body: JSON.stringify({ roll, id }),
+          body: JSON.stringify({ rollNumber: roll, instituteId: id }),
         }
       );
 
-      const data = await response.json();
-      setResult(data);
+      const result = await response.json();
+      if (result.success && result.data) {
+        setResult({
+          isAuthentic: result.data.isAuthentic,
+          instituteName: result.data.instituteName,
+          eiinNumber: result.data.eiinNumber,
+          studentName: result.data.studentName,
+          roll: result.data.rollNumber,
+          id: result.data.idNumber,
+          grade: result.data.cgpa,
+        });
+      } else {
+        setResult({ isAuthentic: false });
+      }
     } catch (error) {
       console.error("Verification error:", error);
       setResult({ isAuthentic: false });
@@ -77,27 +89,46 @@ const VerifyEducation: React.FC = () => {
     setResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append("certificate", uploadedImage);
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(uploadedImage);
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
 
-      // Call backend API with AI-powered OCR and verification
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/verify-education-image`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
-          },
-          body: formData,
+        const response = await fetch(
+          "http://localhost:4000/api/ai/analyze-certificate",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
+            },
+            body: JSON.stringify({
+              image: base64Image,
+              certificateType: "educational",
+            }),
+          }
+        );
+
+        const aiResult = await response.json();
+        if (aiResult.success && aiResult.data.analysis) {
+          setResult({
+            isAuthentic: true,
+            studentName: "AI Analysis",
+            message: aiResult.data.analysis,
+            aiAnalysis: aiResult.data,
+          });
+        } else {
+          setResult({
+            isAuthentic: false,
+            message: aiResult.data?.analysis || "Could not read certificate information",
+          });
         }
-      );
-
-      const data = await response.json();
-      setResult(data);
+        setLoading(false);
+      };
     } catch (error) {
       console.error("Image verification error:", error);
       setResult({ isAuthentic: false });
-    } finally {
       setLoading(false);
     }
   };
@@ -257,47 +288,60 @@ const VerifyEducation: React.FC = () => {
 
               {result.isAuthentic && (
                 <div className="result-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Student Name:</span>
-                    <span className="detail-value">{result.studentName}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Roll Number:</span>
-                    <span className="detail-value">{result.roll}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">ID Number:</span>
-                    <span className="detail-value">{result.id}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Institute:</span>
-                    <span className="detail-value">{result.instituteName}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">EIIN Number:</span>
-                    <span className="detail-value">{result.eiinNumber}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Grade:</span>
-                    <span className="detail-value grade">{result.grade}</span>
-                  </div>
-
-                  {result.gradeDetails && (
-                    <div className="grade-details">
-                      <h3>Grading System Details</h3>
-                      <div className="grade-info">
-                        <p>
-                          <strong>GPA:</strong> {result.gradeDetails.gpa}
-                        </p>
-                        <p>
-                          <strong>Grade:</strong> {result.gradeDetails.grade}
-                        </p>
-                        <p>
-                          <strong>Remarks:</strong>{" "}
-                          {result.gradeDetails.remarks}
-                        </p>
-                      </div>
+                  {result.message && (
+                    <div className="ai-analysis-text">
+                      <h4>AI Certificate Analysis:</h4>
+                      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                        {result.message}
+                      </pre>
                     </div>
+                  )}
+                  
+                  {result.studentName && !result.message && (
+                    <>
+                      <div className="detail-row">
+                        <span className="detail-label">Student Name:</span>
+                        <span className="detail-value">{result.studentName}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Roll Number:</span>
+                        <span className="detail-value">{result.roll}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">ID Number:</span>
+                        <span className="detail-value">{result.id}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Institute:</span>
+                        <span className="detail-value">{result.instituteName}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">EIIN Number:</span>
+                        <span className="detail-value">{result.eiinNumber}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Grade:</span>
+                        <span className="detail-value grade">{result.grade}</span>
+                      </div>
+
+                      {result.gradeDetails && (
+                        <div className="grade-details">
+                          <h3>Grading System Details</h3>
+                          <div className="grade-info">
+                            <p>
+                              <strong>GPA:</strong> {result.gradeDetails.gpa}
+                            </p>
+                            <p>
+                              <strong>Grade:</strong> {result.gradeDetails.grade}
+                            </p>
+                            <p>
+                              <strong>Remarks:</strong>{" "}
+                              {result.gradeDetails.remarks}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
