@@ -57,6 +57,10 @@ const VerifyMedicine: React.FC = () => {
   });
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [loadingSuggestion, setLoadingSuggestion] = useState(false);
+  const [displayedAnalysis, setDisplayedAnalysis] = useState("");
+  const [isTypingAnalysis, setIsTypingAnalysis] = useState(false);
+  const [displayedSuggestion, setDisplayedSuggestion] = useState("");
+  const [isTypingSuggestion, setIsTypingSuggestion] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,7 +93,25 @@ const VerifyMedicine: React.FC = () => {
       );
 
       const result = await response.json();
-      if (result.success && result.data) {
+      console.log(
+        "Medicine verification response:",
+        result,
+        "status:",
+        response.status
+      );
+
+      // Handle error responses
+      if (response.status === 403) {
+        setMedicineInfo({
+          isAuthentic: false,
+          message: result.error || "Insufficient credits",
+        });
+      } else if (response.status === 401) {
+        setMedicineInfo({
+          isAuthentic: false,
+          message: "Authentication failed. Please log in again.",
+        });
+      } else if (result.success && result.data) {
         setMedicineInfo({
           isAuthentic: result.data.isAuthentic,
           medicineName: result.data.name || result.data.medicineName,
@@ -104,11 +126,17 @@ const VerifyMedicine: React.FC = () => {
           description: result.data.description,
         });
       } else {
-        setMedicineInfo({ isAuthentic: false });
+        setMedicineInfo({
+          isAuthentic: false,
+          message: result.message || "Medicine not found",
+        });
       }
     } catch (error) {
       console.error("Verification error:", error);
-      setMedicineInfo({ isAuthentic: false });
+      setMedicineInfo({
+        isAuthentic: false,
+        message: "Network error. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -142,15 +170,32 @@ const VerifyMedicine: React.FC = () => {
 
         const result = await response.json();
         if (result.success && result.data.analysis) {
+          const analysisText = result.data.analysis;
           setMedicineInfo({
             isAuthentic: true,
-            message: result.data.analysis,
+            message: analysisText,
             aiAnalysis: result.data,
           });
+
+          // Typewriter effect for analysis
+          setDisplayedAnalysis("");
+          setIsTypingAnalysis(true);
+          let idx = 0;
+          const interval = setInterval(() => {
+            if (idx < analysisText.length) {
+              setDisplayedAnalysis(analysisText.substring(0, idx + 1));
+              idx++;
+            } else {
+              setIsTypingAnalysis(false);
+              clearInterval(interval);
+            }
+          }, 20);
         } else {
           setMedicineInfo({
             isAuthentic: false,
-            message: result.data?.analysis || "Could not read medicine information from image",
+            message:
+              result.data?.analysis ||
+              "Could not read medicine information from image",
           });
         }
         setLoading(false);
@@ -164,6 +209,13 @@ const VerifyMedicine: React.FC = () => {
 
   const handleGetSuggestion = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!medicineInfo || !medicineInfo.isAuthentic) {
+      alert(
+        "Verify a medicine first (search or upload) before asking AI suggestions."
+      );
+      return;
+    }
+
     setLoadingSuggestion(true);
     setAiSuggestion(null);
 
@@ -185,8 +237,23 @@ const VerifyMedicine: React.FC = () => {
 
       const result = await response.json();
       console.log("AI Response:", result);
-      if (result.success) {
+      if (result.success && result.data) {
+        const suggestionText = result.data.suggestion || result.data;
         setAiSuggestion(result.data);
+
+        // Typewriter effect for suggestion
+        setDisplayedSuggestion("");
+        setIsTypingSuggestion(true);
+        let idx = 0;
+        const interval = setInterval(() => {
+          if (idx < suggestionText.length) {
+            setDisplayedSuggestion(suggestionText.substring(0, idx + 1));
+            idx++;
+          } else {
+            setIsTypingSuggestion(false);
+            clearInterval(interval);
+          }
+        }, 15);
       } else {
         console.error("Failed to get AI suggestion:", result.message);
         alert(`AI Error: ${result.message || "Unknown error"}`);
@@ -313,18 +380,19 @@ const VerifyMedicine: React.FC = () => {
                       >
                         ✕ Remove
                       </button>
+                      <button
+                        type="submit"
+                        className="verify-btn"
+                        disabled={loading}
+                        style={{ width: "100%", marginTop: 4 }}
+                      >
+                        {loading
+                          ? "🔄 AI is analyzing..."
+                          : "✅ Verify with AI"}
+                      </button>
                     </div>
                   )}
                 </div>
-                {uploadedImage && (
-                  <button
-                    type="submit"
-                    className="verify-btn"
-                    disabled={loading}
-                  >
-                    {loading ? "AI is analyzing..." : "Verify with AI"}
-                  </button>
-                )}
               </form>
             </div>
           )}
@@ -351,12 +419,22 @@ const VerifyMedicine: React.FC = () => {
                   <div className="result-details">
                     {medicineInfo.message && (
                       <div className="ai-analysis-text">
-                        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                          {medicineInfo.message}
+                        <pre
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            fontFamily: "inherit",
+                            color: "#000",
+                            lineHeight: "1.6",
+                          }}
+                        >
+                          {displayedAnalysis}
+                          {isTypingAnalysis && (
+                            <span className="typing-cursor">|</span>
+                          )}
                         </pre>
                       </div>
                     )}
-                    
+
                     {medicineInfo.medicineName && (
                       <>
                         <div className="detail-row">
@@ -385,7 +463,9 @@ const VerifyMedicine: React.FC = () => {
                         </div>
                         <div className="detail-row">
                           <span className="detail-label">Price:</span>
-                          <span className="detail-value">{medicineInfo.price}</span>
+                          <span className="detail-value">
+                            {medicineInfo.price}
+                          </span>
                         </div>
                         {medicineInfo.sideEffects && (
                           <div className="side-effects">
@@ -503,13 +583,26 @@ const VerifyMedicine: React.FC = () => {
                     <div className="ai-suggestion">
                       <h3>🤖 AI Medical Suggestion</h3>
                       <div className="suggestion-text">
-                        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                          {aiSuggestion.suggestion}
+                        <pre
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            fontFamily: "inherit",
+                            color: "#000",
+                            lineHeight: "1.6",
+                          }}
+                        >
+                          {displayedSuggestion}
+                          {isTypingSuggestion && (
+                            <span className="typing-cursor">|</span>
+                          )}
                         </pre>
                       </div>
                       {aiSuggestion.timestamp && (
                         <div className="suggestion-timestamp">
-                          <small>Generated: {new Date(aiSuggestion.timestamp).toLocaleString()}</small>
+                          <small>
+                            Generated:{" "}
+                            {new Date(aiSuggestion.timestamp).toLocaleString()}
+                          </small>
                         </div>
                       )}
                     </div>

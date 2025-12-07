@@ -6,12 +6,15 @@ dotenv.config();
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Use models that work with the v1 stable endpoint
+const MODEL_NAME = 'gemini-2.5-flash';
+
 /**
  * Generate medicine suggestion for a patient based on medicine info and patient data
  */
 export async function getMedicineSuggestion(medicineInfo, patientData) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a professional medical AI assistant. Analyze the following medicine and patient information, then provide a detailed medical suggestion in plain text format.
 
@@ -79,42 +82,25 @@ Provide the response in plain text with clear sections and formatting.`;
 /**
  * Analyze and verify certificate image using Gemini Vision
  */
-export async function analyzeCertificateImage(imageBase64, certificateType = 'educational') {
+export async function analyzeCertificateImage(imageBase64, certificateType = 'educational', mimeType = 'image/jpeg') {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const prompt = `You are an expert document verification AI. Analyze this ${certificateType} certificate image and extract all visible information.
+    const prompt = `You are a professional certificate verification AI. Analyze this ${certificateType} certificate image and provide a CONCISE verification report.
 
-Please analyze the image and provide a detailed text report covering:
+Provide a SHORT, focused analysis (3-5 sentences) covering:
 
-1. READABILITY: Can the certificate be read clearly?
-2. CERTIFICATE TYPE: What type of certificate is this?
-3. EXTRACTED INFORMATION:
-   - Student/Recipient Name
-   - Roll Number/ID Number
-   - Institution Name
-   - Grade/Result
-   - Issue Date
-   - Certificate ID
-   - Course/Program Name
-   - Duration
-   - Skills/Achievements
+1. READABILITY: Is the certificate clear and readable?
+2. KEY INFORMATION: List only the most important details (name, institution, date, ID numbers)
+3. AUTHENTICITY SCORE: Rate 0-100 based on visible security features
+4. RECOMMENDATION: Should this certificate be accepted? (Accept/Reject/Manual Review)
 
-4. AUTHENTICITY INDICATORS:
-   - Official Seal present?
-   - Authorized Signature present?
-   - Watermark or security features?
-   - Overall quality score (0-100)
-   - Any suspicious elements?
-
-5. VERIFICATION RECOMMENDATIONS
-
-Provide the analysis in a clear, easy-to-read text format.`;
+Keep your response brief and actionable. Focus on verification, not detailed descriptions.`;
 
     const imagePart = {
       inlineData: {
         data: imageBase64,
-        mimeType: 'image/jpeg',
+        mimeType,
       },
     };
 
@@ -139,40 +125,25 @@ Provide the analysis in a clear, easy-to-read text format.`;
 /**
  * Analyze medicine image and extract information
  */
-export async function analyzeMedicineImage(imageBase64) {
+export async function analyzeMedicineImage(imageBase64, mimeType = 'image/jpeg') {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const prompt = `You are a pharmaceutical AI expert. Analyze this medicine package/label image and extract all visible information.
+    const prompt = `You are a pharmaceutical verification AI. Analyze this medicine package/label image and provide a BRIEF verification report.
 
-Please provide a detailed text analysis covering:
+Provide a SHORT analysis (3-5 sentences) covering:
 
-1. READABILITY: Can the medicine label/package be read clearly?
+1. READABILITY: Can the label be read clearly?
+2. KEY DETAILS: Medicine name, manufacturer, batch number, expiry date (if visible)
+3. SAFETY SCORE: Rate 0-100 based on package condition and authenticity indicators
+4. RECOMMENDATION: Is this medicine safe to use? (Safe/Unsafe/Verify Manually)
 
-2. EXTRACTED INFORMATION:
-   - Medicine Name
-   - Medicine Code/Product Code
-   - Manufacturer Name
-   - Generic Name
-   - Strength/Power/Dosage
-   - Batch Number
-   - Expiry Date
-   - Price (if visible)
-
-3. PACKAGE ASSESSMENT:
-   - Barcode present?
-   - Hologram/Security features?
-   - Overall condition (Good/Fair/Poor/Damaged)
-   - Any suspicious elements or concerns?
-
-4. VERIFICATION RECOMMENDATIONS
-
-Provide the analysis in a clear, easy-to-read text format.`;
+Keep your response concise and focused on safety verification.`;
 
     const imagePart = {
       inlineData: {
         data: imageBase64,
-        mimeType: 'image/jpeg',
+        mimeType,
       },
     };
 
@@ -198,11 +169,11 @@ Provide the analysis in a clear, easy-to-read text format.`;
  */
 export async function getAIAssistance(question, context = {}) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a helpful AI assistant for the ASURE verification system. 
     
-User Query: ${query}
+User Query: ${question}
 
 Context: ${JSON.stringify(context, null, 2)}
 

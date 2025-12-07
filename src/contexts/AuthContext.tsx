@@ -8,6 +8,8 @@ interface User {
   role: string;
   profile?: Record<string, any>;
   verificationCredits?: number;
+  monthlyCreditsUsed?: number;
+  totalCreditsPurchased?: number;
   auth?: {
     email: string;
   };

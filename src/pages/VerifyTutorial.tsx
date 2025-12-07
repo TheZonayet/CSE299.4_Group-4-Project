@@ -10,6 +10,8 @@ const VerifyTutorial: React.FC = () => {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,17 +26,41 @@ const VerifyTutorial: React.FC = () => {
         body: JSON.stringify({ certificateId: id }),
       });
       const result = await res.json();
-      if (result.success && result.data) {
+      console.log(
+        "Tutorial verification response:",
+        result,
+        "status:",
+        res.status
+      );
+
+      // Handle error responses
+      if (res.status === 403) {
+        setResult({
+          isAuthentic: false,
+          message: result.error || "Insufficient credits",
+        });
+      } else if (res.status === 401) {
+        setResult({
+          isAuthentic: false,
+          message: "Authentication failed. Please log in again.",
+        });
+      } else if (result.success && result.data) {
         setResult({
           isAuthentic: result.data.isAuthentic,
           ...result.data,
         });
       } else {
-        setResult({ isAuthentic: false });
+        setResult({
+          isAuthentic: false,
+          message: result.message || "Certificate not found",
+        });
       }
     } catch (error) {
       console.error("Verification error:", error);
-      setResult({ isAuthentic: false });
+      setResult({
+        isAuthentic: false,
+        message: "Network error. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -44,7 +70,10 @@ const VerifyTutorial: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
+      reader.onloadend = () => {
+        console.log("Image loaded successfully");
+        setImage(reader.result as string);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -80,7 +109,8 @@ const VerifyTutorial: React.FC = () => {
       } else {
         setResult({
           isAuthentic: false,
-          message: aiResult.data?.analysis || "Could not read certificate information",
+          message:
+            aiResult.data?.analysis || "Could not read certificate information",
         });
       }
     } catch (error) {
@@ -167,19 +197,25 @@ const VerifyTutorial: React.FC = () => {
                     >
                       ✕ Remove
                     </button>
+                    <div style={{ marginTop: "16px" }}>
+                      <button
+                        type="button"
+                        className="verify-btn"
+                        onClick={handleImageVerification}
+                        disabled={loading}
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {loading
+                          ? "🔄 AI is analyzing..."
+                          : "✅ Verify with AI"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-              {image && (
-                <button
-                  type="button"
-                  className="verify-btn"
-                  onClick={handleImageVerification}
-                  disabled={loading}
-                >
-                  {loading ? "AI is analyzing..." : "Verify with AI"}
-                </button>
-              )}
             </div>
           )}
 
@@ -204,25 +240,39 @@ const VerifyTutorial: React.FC = () => {
                   {result.message && (
                     <div className="ai-analysis-text">
                       <h4>AI Certificate Analysis:</h4>
-                      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                        {result.message}
+                      <pre
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          fontFamily: "inherit",
+                          color: "#000",
+                          lineHeight: "1.6",
+                        }}
+                      >
+                        {displayedText}
+                        {isTyping && <span className="typing-cursor">|</span>}
                       </pre>
                     </div>
                   )}
-                  
+
                   {result.studentName && !result.message && (
                     <>
                       <div className="detail-row">
                         <span className="detail-label">Student Name:</span>
-                        <span className="detail-value">{result.studentName}</span>
+                        <span className="detail-value">
+                          {result.studentName}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Institute:</span>
-                        <span className="detail-value">{result.instituteName}</span>
+                        <span className="detail-value">
+                          {result.instituteName}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">License Number:</span>
-                        <span className="detail-value">{result.licenseNumber}</span>
+                        <span className="detail-value">
+                          {result.licenseNumber}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Skill:</span>

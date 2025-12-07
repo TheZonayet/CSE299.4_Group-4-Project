@@ -66,10 +66,15 @@ router.post('/analyze-certificate', async (req, res) => {
       });
     }
 
-    // Remove data:image/jpeg;base64, prefix if present
-    const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
+    // detect mime from data URL
+    let mimeType = 'image/jpeg';
+    const match = /^data:(.+);base64,/.exec(image);
+    if (match && match[1]) {
+      mimeType = match[1];
+    }
+    const base64Image = image.replace(/^data:(.+);base64,/, '');
 
-    const analysis = await analyzeCertificateImage(base64Image, certificateType);
+    const analysis = await analyzeCertificateImage(base64Image, certificateType, mimeType);
 
     res.json({
       success: true,
@@ -100,10 +105,14 @@ router.post('/analyze-medicine', async (req, res) => {
       });
     }
 
-    // Remove data:image/jpeg;base64, prefix if present
-    const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
+    let mimeType = 'image/jpeg';
+    const match = /^data:(.+);base64,/.exec(image);
+    if (match && match[1]) {
+      mimeType = match[1];
+    }
+    const base64Image = image.replace(/^data:(.+);base64,/, '');
 
-    const analysis = await analyzeMedicineImage(base64Image);
+    const analysis = await analyzeMedicineImage(base64Image, mimeType);
 
     res.json({
       success: true,

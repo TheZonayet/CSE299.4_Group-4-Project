@@ -1,14 +1,42 @@
 import axios from 'axios';
-import { getDB } from '../db.js';
+import { getDB } from '../db-mysql.js';
+import { consumeCreditAndLog } from '../helpers/creditsHelper.js';
 
 export async function verifyProduct(req, res) {
   const { barcode } = req.body;
   if (!barcode) return res.status(400).json({ error: 'Barcode is required' });
-  const db = getDB();
-  const products = db.collection('products');
-  const product = await products.findOne({ barcode });
-  if (!product) return res.json({ success: false, message: 'Product not found', data: { isAuthentic: false } });
-  return res.json({ success: true, message: 'Product verified', data: { ...product, isAuthentic: true } });
+  const pool = getDB();
+  
+  try {
+    const [products] = await pool.execute(
+      'SELECT * FROM products WHERE product_code = ?',
+      [barcode]
+    );
+    
+    if (products.length === 0) {
+      return res.json({ success: false, message: 'Product not found', data: { isAuthentic: false } });
+    }
+    
+    const product = products[0];
+    const data = {
+      barcode: product.product_code,
+      name: product.product_name,
+      manufacturer: product.manufacturer,
+      batchNumber: product.batch_number,
+      manufacturingDate: product.manufacturing_date,
+      expiryDate: product.expiry_date,
+      description: product.description,
+      isAuthentic: true
+    };
+
+    await consumeCreditAndLog(req.user.sub, 'PRODUCT', product.product_code || barcode);
+    
+    return res.json({ success: true, message: 'Product verified', data });
+  } catch (error) {
+    console.error('Error verifying product:', error);
+    if (error.status === 403) return res.status(403).json({ error: error.message });
+    return res.status(500).json({ error: 'Failed to verify product' });
+  }
 }
 
 export async function lookupBarcode(req, res) {

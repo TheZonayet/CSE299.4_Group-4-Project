@@ -182,7 +182,7 @@ const EnterTutorialCertificate: React.FC = () => {
 
             <div className="mb-3">
               <label htmlFor="instituteId" className="form-label">
-                Institute ID (Auto-filled)
+                Institute ID *
               </label>
               <input
                 type="text"
@@ -190,14 +190,15 @@ const EnterTutorialCertificate: React.FC = () => {
                 id="instituteId"
                 name="instituteId"
                 value={formData.instituteId}
-                readOnly
-                disabled
+                onChange={handleInputChange}
+                placeholder="e.g., TUT-001"
+                required
               />
             </div>
 
             <div className="mb-3">
               <label htmlFor="instituteName" className="form-label">
-                Institute Name (Auto-filled)
+                Institute Name *
               </label>
               <input
                 type="text"
@@ -205,8 +206,9 @@ const EnterTutorialCertificate: React.FC = () => {
                 id="instituteName"
                 name="instituteName"
                 value={formData.instituteName}
-                readOnly
-                disabled
+                onChange={handleInputChange}
+                placeholder="e.g., Code Course Academy"
+                required
               />
             </div>
 
