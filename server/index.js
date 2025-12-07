@@ -1,5 +1,5 @@
-// DB connection functions moved to db.js to avoid circular dependency
-import { connectDB, getDB } from './db.js';
+// DB connection functions moved to db-mysql.js to avoid circular dependency
+import { connectDB, getDB } from './db-mysql.js';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -11,6 +11,7 @@ import medicineRoutes from './routes/medicineRoutes.js';
 import tutorialRoutes from './routes/tutorialRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import * as userHelpers from './helpers/userHelpers.js';
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const dbName = process.env.DB_NAME || 'asure';
@@ -21,7 +22,8 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '2h';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize database connection
 await connectDB();
@@ -91,7 +93,6 @@ app.post('/api/register', wrapAsync(async (req, res) => {
     return res.status(400).json({ error: 'Unsupported role' });
   }
 
-  // Validate role-specific fields
   const missing = ROLE_FIELDS[role].filter(f => !req.body[f]);
   if (missing.length) {
     return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
@@ -102,10 +103,7 @@ app.post('/api/register', wrapAsync(async (req, res) => {
     return res.status(400).json({ error: 'Email field is required for this role' });
   }
 
-  const db = getDB();
-  const usersCollection = db.collection('users');
-
-  const existingUser = await usersCollection.findOne({ 'auth.email': email });
+  const existingUser = await userHelpers.findUserByEmail(email);
   if (existingUser) {
     return res.status(409).json({ error: 'Email already registered' });
   }
@@ -114,23 +112,20 @@ app.post('/api/register', wrapAsync(async (req, res) => {
   const passwordHash = await bcrypt.hash(password, salt);
   const id = randomUUID();
 
-  const profile = ROLE_FIELDS[role].reduce((acc, field) => {
+  const profileData = ROLE_FIELDS[role].reduce((acc, field) => {
     acc[field] = req.body[field];
     return acc;
   }, {});
 
-  const newUser = {
+  const newUser = await userHelpers.createUser({
     id,
     role,
-    auth: { email, passwordHash },
-    profile,
-    verificationCredits: 100,
-    createdAt: new Date()
-  };
-  await usersCollection.insertOne(newUser);
+    email,
+    passwordHash,
+    profileData
+  });
 
-  // After registration, client should redirect to login page
-  return res.json({ user: { id, role, email } }); // no token on register
+  return res.json({ user: newUser });
 }));
 
 app.post('/api/login', wrapAsync(async (req, res) => {
@@ -149,67 +144,57 @@ app.post('/api/login', wrapAsync(async (req, res) => {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const db = getDB();
-  const usersCollection = db.collection('users');
-  const user = await usersCollection.findOne({ 'auth.email': email });
+  const user = await userHelpers.findUserByEmail(email);
   if (!user || user.role !== role) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const passwordMatch = await bcrypt.compare(password, user.auth.passwordHash);
+  const passwordMatch = await bcrypt.compare(password, user.password_hash);
   if (!passwordMatch) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const token = signToken(user);
-  return res.json({ user: { id: user.id, role: user.role, email: user.auth.email }, token });
+  const token = signToken({ id: user.id, role: user.role });
+  return res.json({ user: { id: user.id, role: user.role, email: user.email }, token });
 }));
 
 // Protected sample route (will expand later for profile & verification)
 app.get('/api/me', authMiddleware, wrapAsync(async (req, res) => {
-  const db = getDB();
-  const usersCollection = db.collection('users');
-  const user = await usersCollection.findOne({ id: req.user.sub }, { projection: { auth: 0 } });
+  const user = await userHelpers.getUserWithProfile(req.user.sub);
   if (!user) return res.status(404).json({ error: 'User not found' });
   return res.json({ user });
 }));
 
 // Profile endpoints
 app.get('/api/profile', authMiddleware, wrapAsync(async (req, res) => {
-  const db = getDB();
-  const usersCollection = db.collection('users');
-  const user = await usersCollection.findOne({ id: req.user.sub }, { projection: { 'auth.passwordHash': 0 } });
+  const user = await userHelpers.getUserWithProfile(req.user.sub);
   if (!user) return res.status(404).json({ error: 'User not found' });
   return res.json({ user });
 }));
 
 app.put('/api/profile', authMiddleware, wrapAsync(async (req, res) => {
-  const db = getDB();
-  const usersCollection = db.collection('users');
-  
-  const user = await usersCollection.findOne({ id: req.user.sub });
+  const user = await userHelpers.findUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   const allowedFields = ROLE_FIELDS[user.role] || [];
   const updates = {};
   
-  // Only update allowed profile fields for the user's role
   for (const field of allowedFields) {
     if (req.body[field] !== undefined) {
-      updates[`profile.${field}`] = req.body[field];
+      updates[field] = req.body[field];
     }
+  }
+
+  // Allow profile picture update
+  if (req.body.profilePicture !== undefined) {
+    updates.profilePicture = req.body.profilePicture;
   }
 
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No valid fields to update' });
   }
 
-  await usersCollection.updateOne(
-    { id: req.user.sub },
-    { $set: updates }
-  );
-
-  const updatedUser = await usersCollection.findOne({ id: req.user.sub }, { projection: { 'auth.passwordHash': 0 } });
+  const updatedUser = await userHelpers.updateUserProfile(req.user.sub, updates);
   return res.json({ user: updatedUser });
 }));
 
@@ -221,314 +206,236 @@ app.post('/api/verify', authMiddleware, wrapAsync(async (req, res) => {
   }
 
   const db = getDB();
-  const usersCollection = db.collection('users');
-  const verificationsCollection = db.collection('verifications');
 
-  const user = await usersCollection.findOne({ id: req.user.sub });
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  // Pull latest credit state
+  const [users] = await db.execute(
+    `SELECT verification_credits, monthly_credits_used, last_credit_reset
+     FROM users WHERE id = ?`,
+    [req.user.sub]
+  );
+  if (!users.length) return res.status(404).json({ error: 'User not found' });
 
-  if (user.verificationCredits <= 0) {
-    return res.status(403).json({ error: 'Insufficient verification credits' });
+  const user = users[0];
+  const monthlyFreeCredits = 100;
+  const now = new Date();
+  const lastReset = user.last_credit_reset ? new Date(user.last_credit_reset) : null;
+  const needsReset = !lastReset || (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear());
+
+  if (needsReset) {
+    await db.execute(
+      `UPDATE users SET monthly_credits_used = 0, last_credit_reset = NOW() WHERE id = ?`,
+      [req.user.sub]
+    );
+    user.monthly_credits_used = 0;
   }
 
-  const verificationId = randomUUID();
-  const verification = {
-    id: verificationId,
-    userId: req.user.sub,
-    type,
-    qrCode: qrCode || null,
-    metadata: metadata || {},
-    status: 'verified',
-    verifiedAt: new Date()
-  };
+  const creditsUsedThisMonth = user.monthly_credits_used || 0;
+  const freeCreditsRemaining = Math.max(0, monthlyFreeCredits - creditsUsedThisMonth);
+  const purchasedCredits = user.verification_credits || 0;
+  const totalAvailable = freeCreditsRemaining + purchasedCredits;
 
-  await verificationsCollection.insertOne(verification);
-  await usersCollection.updateOne(
-    { id: req.user.sub },
-    { $inc: { verificationCredits: -1 } }
+  if (totalAvailable <= 0) {
+    return res.status(403).json({ error: 'Insufficient verification credits', creditsRemaining: 0 });
+  }
+
+  // Deduct: prefer free credits first
+  if (freeCreditsRemaining > 0) {
+    await db.execute(
+      `UPDATE users SET monthly_credits_used = monthly_credits_used + 1 WHERE id = ?`,
+      [req.user.sub]
+    );
+  } else {
+    await db.execute(
+      `UPDATE users SET verification_credits = verification_credits - 1 WHERE id = ?`,
+      [req.user.sub]
+    );
+  }
+
+  await userHelpers.addVerificationHistory({
+    userId: req.user.sub,
+    type: type.toUpperCase(),
+    referenceId: qrCode || JSON.stringify(metadata),
+    status: 'SUCCESS'
+  });
+
+  await db.execute(
+    `INSERT INTO credit_usage (user_id, credits_added, credits_removed, balance_after, description)
+     VALUES (?, 0, 1,
+       (SELECT verification_credits + GREATEST(0, 100 - monthly_credits_used) FROM users WHERE id = ?),
+       ?)`,
+    [req.user.sub, req.user.sub, `${type.toUpperCase()} verification`]
   );
 
-  return res.json({ verification });
+  return res.json({
+    verification: {
+      id: randomUUID(),
+      userId: req.user.sub,
+      type,
+      status: 'verified',
+      creditsRemaining: totalAvailable - 1
+    }
+  });
 }));
 
 app.get('/api/verification-history', authMiddleware, wrapAsync(async (req, res) => {
-  const db = getDB();
-  const verificationsCollection = db.collection('verifications');
-  
-  const verifications = await verificationsCollection
-    .find({ userId: req.user.sub })
-    .sort({ verifiedAt: -1 })
-    .limit(100)
-    .toArray();
-
+  const verifications = await userHelpers.getVerificationHistory(req.user.sub, 100);
   return res.json({ verifications });
 }));
 
 app.get('/api/verification-limits', authMiddleware, wrapAsync(async (req, res) => {
+  const credits = await userHelpers.getVerificationCredits(req.user.sub);
+  return res.json({ credits });
+}));
+
+// Profile picture upload
+app.put('/api/profile/upload-picture', authMiddleware, wrapAsync(async (req, res) => {
+  const { profilePicture } = req.body;
+  if (!profilePicture) return res.status(400).json({ error: 'Profile picture is required' });
+
+  const sizeMB = (profilePicture.length * 3) / 4 / (1024 * 1024);
+  if (sizeMB > 5) return res.status(400).json({ error: 'Image size exceeds 5MB' });
+
   const db = getDB();
-  const usersCollection = db.collection('users');
-  
-  const user = await usersCollection.findOne({ id: req.user.sub }, { projection: { verificationCredits: 1 } });
+  const user = await userHelpers.findUserById(req.user.sub);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  return res.json({ credits: user.verificationCredits || 0 });
+  const profileTable = {
+    EDUCATION: 'educational_profiles',
+    MEDICINE: 'medicine_profiles',
+    TUTORIALS: 'tutorial_profiles'
+  }[user.role];
+
+  if (!profileTable) return res.status(400).json({ error: 'Profile table not found for role' });
+
+  await db.execute(
+    `UPDATE ${profileTable} SET profile_picture = ?, updated_at = NOW() WHERE user_id = ?`,
+    [profilePicture, req.user.sub]
+  );
+
+  return res.json({ success: true, message: 'Profile picture updated' });
 }));
 
-// Educational Certificate Verification
-app.post('/api/verify-education', authMiddleware, wrapAsync(async (req, res) => {
-  const { rollNumber, instituteId } = req.body;
-  
-  if (!rollNumber || !instituteId) {
-    return res.status(400).json({ error: 'Roll number and institute ID are required' });
-  }
-
+// Get credits balance with monthly reset
+app.get('/api/credits/balance', authMiddleware, wrapAsync(async (req, res) => {
   const db = getDB();
-  const certificatesCollection = db.collection('educational_certificates');
-  
-  // Mock verification - in production, search database
-  const certificate = await certificatesCollection.findOne({ rollNumber, instituteId });
-  
-  if (certificate) {
-    return res.json({
-      success: true,
-      message: 'Certificate verified successfully',
-      data: {
-        instituteName: certificate.instituteName || 'Sample Institute',
-        studentName: certificate.studentName || 'John Doe',
-        degree: certificate.degree || 'Bachelor of Science',
-        cgpa: certificate.cgpa || '3.75',
-        passingYear: certificate.passingYear || '2023',
-        rollNumber: certificate.rollNumber,
-        isAuthentic: true
-      }
-    });
-  } else {
-    return res.json({
-      success: false,
-      message: 'Certificate not found in database',
-      data: { isAuthentic: false }
-    });
-  }
-}));
+  const [users] = await db.execute(
+    `SELECT verification_credits, monthly_credits_used, last_credit_reset, total_credits_purchased
+     FROM users WHERE id = ?`,
+    [req.user.sub]
+  );
+  if (!users.length) return res.status(404).json({ error: 'User not found' });
 
-app.post('/api/verify-education-image', authMiddleware, wrapAsync(async (req, res) => {
-  const { imageData } = req.body;
-  
-  if (!imageData) {
-    return res.status(400).json({ error: 'Image data is required' });
+  const user = users[0];
+  const monthlyFreeCredits = 100;
+  const now = new Date();
+  const lastReset = user.last_credit_reset ? new Date(user.last_credit_reset) : null;
+  const needsReset = !lastReset || (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear());
+
+  if (needsReset) {
+    await db.execute(
+      `UPDATE users SET monthly_credits_used = 0, last_credit_reset = NOW() WHERE id = ?`,
+      [req.user.sub]
+    );
+    user.monthly_credits_used = 0;
   }
 
-  // Mock AI OCR response - in production, integrate with OCR API
-  const mockExtractedData = {
-    instituteName: 'AI Detected Institute',
-    studentName: 'AI Detected Name',
-    degree: 'Bachelor of Engineering',
-    cgpa: '3.85',
-    passingYear: '2024',
-    rollNumber: 'AI-' + Math.floor(Math.random() * 10000),
-    isAuthentic: true
-  };
+  const freeRemaining = Math.max(0, monthlyFreeCredits - (user.monthly_credits_used || 0));
+  const purchased = user.verification_credits || 0;
 
   return res.json({
-    success: true,
-    message: 'Certificate analyzed successfully via AI',
-    data: mockExtractedData
+    monthlyFree: monthlyFreeCredits,
+    monthlyUsed: user.monthly_credits_used || 0,
+    freeRemaining,
+    purchased,
+    totalPurchased: user.total_credits_purchased || 0,
+    totalAvailable: freeRemaining + purchased
   });
 }));
 
-// Medicine Verification
-app.post('/api/verify-medicine', authMiddleware, wrapAsync(async (req, res) => {
-  const { medicineName, medicineCode } = req.body;
-  
-  if (!medicineName && !medicineCode) {
-    return res.status(400).json({ error: 'Medicine name or code is required' });
-  }
-
+// List credit packages
+app.get('/api/credits/packages', wrapAsync(async (req, res) => {
   const db = getDB();
-  const medicinesCollection = db.collection('medicines');
-  
-  const query = medicineCode 
-    ? { code: medicineCode }
-    : { name: new RegExp(medicineName, 'i') };
-  
-  const medicine = await medicinesCollection.findOne(query);
-  
-  if (medicine) {
-    return res.json({
-      success: true,
-      message: 'Medicine verified successfully',
-      data: {
-        name: medicine.name || 'Sample Medicine',
-        manufacturer: medicine.manufacturer || 'Pharma Corp',
-        batchNumber: medicine.batchNumber || 'BATCH-2024-001',
-        expiryDate: medicine.expiryDate || '2026-12-31',
-        isAuthentic: true,
-        price: medicine.price || '$25.00'
-      }
-    });
-  } else {
-    return res.json({
-      success: false,
-      message: 'Medicine not found in database',
-      data: { isAuthentic: false }
-    });
-  }
+  const [packages] = await db.execute(
+    `SELECT id, name, credits, price_bdt, description, is_recommended
+     FROM credit_packages
+     WHERE is_active = TRUE
+     ORDER BY credits ASC`
+  );
+  return res.json({ packages });
 }));
 
-app.post('/api/verify-medicine-image', authMiddleware, wrapAsync(async (req, res) => {
-  const { imageData } = req.body;
-  
-  if (!imageData) {
-    return res.status(400).json({ error: 'Image data is required' });
-  }
+// Create payment intent
+app.post('/api/payments/create', authMiddleware, wrapAsync(async (req, res) => {
+  const { packageId, paymentMethod } = req.body;
+  const validMethods = ['BKASH', 'VISA', 'MASTERCARD', 'BANK_TRANSFER'];
+  if (!packageId || !paymentMethod) return res.status(400).json({ error: 'Package ID and payment method are required' });
+  if (!validMethods.includes(paymentMethod)) return res.status(400).json({ error: 'Invalid payment method' });
 
-  // Mock AI response
-  const mockMedicine = {
-    name: 'AI Detected Medicine',
-    manufacturer: 'AI Pharma',
-    batchNumber: 'AI-BATCH-' + Math.floor(Math.random() * 1000),
-    expiryDate: '2026-06-30',
-    isAuthentic: true,
-    price: '$' + (Math.random() * 50 + 10).toFixed(2)
-  };
+  const db = getDB();
+  const [packages] = await db.execute(
+    'SELECT * FROM credit_packages WHERE id = ? AND is_active = TRUE',
+    [packageId]
+  );
+  if (!packages.length) return res.status(404).json({ error: 'Package not found' });
+
+  const pkg = packages[0];
+  const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+
+  const [result] = await db.execute(
+    `INSERT INTO payments (user_id, amount, credits_purchased, payment_method, transaction_id, payment_status)
+     VALUES (?, ?, ?, ?, ?, 'PENDING')`,
+    [req.user.sub, pkg.price_bdt, pkg.credits, paymentMethod, transactionId]
+  );
 
   return res.json({
-    success: true,
-    message: 'Medicine analyzed successfully via AI',
-    data: mockMedicine
+    paymentId: result.insertId,
+    transactionId,
+    amount: pkg.price_bdt,
+    credits: pkg.credits,
+    paymentMethod,
+    status: 'PENDING'
   });
 }));
 
-app.post('/api/medicine-suggestion', authMiddleware, wrapAsync(async (req, res) => {
-  const { medicineName, patientData } = req.body;
-  
-  if (!medicineName || !patientData) {
-    return res.status(400).json({ error: 'Medicine name and patient data are required' });
-  }
-
-  // Mock AI suggestion based on patient data
-  const mockSuggestion = {
-    recommendedDosage: `Based on age ${patientData.age} and weight ${patientData.weight}kg: Take 2 tablets daily`,
-    suitability: 'Suitable for patient profile',
-    warnings: patientData.allergies ? `Warning: Patient has allergies to ${patientData.allergies}` : 'No known conflicts',
-    alternatives: [
-      { name: 'Alternative Medicine A', price: '$20.00', availability: 'In Stock' },
-      { name: 'Alternative Medicine B', price: '$18.50', availability: 'In Stock' }
-    ]
-  };
-
-  return res.json({
-    success: true,
-    message: 'AI suggestion generated successfully',
-    data: mockSuggestion
-  });
-}));
-
-// Product Verification
-app.post('/api/verify-product', authMiddleware, wrapAsync(async (req, res) => {
-  const { barcode, imageData } = req.body;
-  
-  if (!barcode && !imageData) {
-    return res.status(400).json({ error: 'Barcode or image data is required' });
-  }
+// Verify/complete payment (mock webhook/user confirmation)
+app.post('/api/payments/verify', authMiddleware, wrapAsync(async (req, res) => {
+  const { transactionId, gatewayTransactionId } = req.body;
+  if (!transactionId) return res.status(400).json({ error: 'Transaction ID is required' });
 
   const db = getDB();
-  const productsCollection = db.collection('products');
-  
-  let product;
-  if (barcode) {
-    product = await productsCollection.findOne({ barcode });
-  }
+  const [payments] = await db.execute(
+    'SELECT * FROM payments WHERE transaction_id = ? AND user_id = ?',
+    [transactionId, req.user.sub]
+  );
+  if (!payments.length) return res.status(404).json({ error: 'Payment not found' });
 
-  if (product) {
-    return res.json({
-      success: true,
-      message: 'Product verified successfully',
-      data: {
-        name: product.name || 'Sample Product',
-        manufacturer: product.manufacturer || 'Product Corp',
-        barcode: product.barcode,
-        isAuthentic: true,
-        price: product.price || '$49.99',
-        similarProducts: [
-          { name: 'Similar Product A', price: '$45.00', rating: 4.5 },
-          { name: 'Similar Product B', price: '$52.00', rating: 4.7 }
-        ]
-      }
-    });
-  } else {
-    // Mock web search result
-    return res.json({
-      success: true,
-      message: 'Product found via web search',
-      data: {
-        name: 'Product from Web',
-        manufacturer: 'Various Sellers',
-        barcode: barcode || 'UNKNOWN',
-        isAuthentic: false,
-        price: '$' + (Math.random() * 100 + 20).toFixed(2),
-        similarProducts: [
-          { name: 'Web Similar A', price: '$35.00', rating: 4.2 },
-          { name: 'Web Similar B', price: '$40.00', rating: 4.4 }
-        ]
-      }
-    });
-  }
-}));
+  const payment = payments[0];
+  if (payment.payment_status === 'COMPLETED') return res.status(400).json({ error: 'Payment already completed' });
 
-// Tutorial Certificate Verification
-app.post('/api/verify-tutorial', authMiddleware, wrapAsync(async (req, res) => {
-  const { certificateId, imageData } = req.body;
-  
-  if (!certificateId && !imageData) {
-    return res.status(400).json({ error: 'Certificate ID or image data is required' });
-  }
+  await db.execute(
+    `UPDATE payments
+     SET payment_status = 'COMPLETED', gateway_transaction_id = ?, completed_at = NOW()
+     WHERE id = ?`,
+    [gatewayTransactionId || transactionId, payment.id]
+  );
 
-  const db = getDB();
-  const tutorialCertificatesCollection = db.collection('tutorial_certificates');
-  
-  let certificate;
-  if (certificateId) {
-    certificate = await tutorialCertificatesCollection.findOne({ certificateId });
-  }
+  await db.execute(
+    `UPDATE users
+     SET verification_credits = verification_credits + ?,
+         total_credits_purchased = total_credits_purchased + ?
+     WHERE id = ?`,
+    [payment.credits_purchased, payment.credits_purchased, payment.user_id]
+  );
 
-  if (certificate || imageData) {
-    const extractedSkills = imageData 
-      ? ['JavaScript', 'React', 'Node.js', 'MongoDB'] // Mock AI extraction
-      : (certificate?.skills || ['Programming', 'Web Development']);
+  await db.execute(
+    `INSERT INTO credit_usage (user_id, credits_added, credits_removed, balance_after, description)
+     VALUES (?, ?, 0,
+       (SELECT verification_credits + GREATEST(0, 100 - monthly_credits_used) FROM users WHERE id = ?),
+       ?)`,
+    [payment.user_id, payment.credits_purchased, payment.user_id, `Purchased ${payment.credits_purchased} credits via ${payment.payment_method}`]
+  );
 
-    return res.json({
-      success: true,
-      message: 'Certificate verified successfully',
-      data: {
-        instituteName: certificate?.instituteName || 'AI Tutorial Institute',
-        studentName: certificate?.studentName || 'AI Detected Student',
-        courseName: certificate?.courseName || 'Full Stack Development',
-        completionDate: certificate?.completionDate || '2024-11-15',
-        certificateId: certificateId || 'AI-CERT-' + Math.floor(Math.random() * 10000),
-        isAuthentic: certificate ? true : false,
-        skills: extractedSkills,
-        youtubeRecommendations: [
-          {
-            title: `${extractedSkills[0]} Tutorial for Beginners`,
-            channel: 'Programming Academy',
-            url: `https://youtube.com/watch?v=demo${Math.floor(Math.random() * 1000)}`
-          },
-          {
-            title: `Advanced ${extractedSkills[1] || 'Programming'} Course`,
-            channel: 'Tech Tutorials',
-            url: `https://youtube.com/watch?v=demo${Math.floor(Math.random() * 1000)}`
-          }
-        ]
-      }
-    });
-  } else {
-    return res.json({
-      success: false,
-      message: 'Certificate not found in database',
-      data: { isAuthentic: false }
-    });
-  }
+  return res.json({ success: true, message: 'Payment verified', creditsAdded: payment.credits_purchased });
 }));
 
 // Global error handler

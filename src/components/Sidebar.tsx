@@ -1,69 +1,95 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { clearToken, getVerificationLimits } from "../services/api";
+import { clearToken } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import logo from "../assets/Website logo.png";
 import "./Sidebar.css";
 
-interface SidebarProps {
-  isOpen?: boolean;
-  onToggle?: () => void;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => {
+const Sidebar: React.FC = () => {
   const navigate = useNavigate();
-  const [credits, setCredits] = useState<number>(0);
+  const { user } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    getVerificationLimits()
-      .then((data) => setCredits(data.credits))
-      .catch(() => setCredits(0));
-  }, []);
+  const monthlyFreeCredits = 100;
+  const creditsRemaining = monthlyFreeCredits - (user?.monthlyCreditsUsed || 0);
+
+  console.log("Sidebar - user.monthlyCreditsUsed:", user?.monthlyCreditsUsed);
+  console.log("Sidebar - creditsRemaining:", creditsRemaining);
 
   const handleLogout = () => {
     clearToken();
     navigate("/login");
   };
 
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsOpen(false);
+  };
+
   return (
-    <div className={`sidebar ${isOpen ? "open" : "closed"}`}>
-      <div className="sidebar-header">
-        <img src={logo} alt="Asure Logo" className="sidebar-logo" />
-        {onToggle && (
-          <button className="sidebar-toggle" onClick={onToggle}>
-            {isOpen ? "«" : "»"}
-          </button>
-        )}
-      </div>
+    <>
+      {/* Hamburger Button - Only visible when sidebar is closed */}
+      {!isOpen && (
+        <button className="hamburger-menu" onClick={toggleSidebar}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      )}
 
-      {isOpen && (
-        <div className="sidebar-content">
-          <div className="sidebar-credits">
-            <h6>Verification Credits</h6>
-            <div className="credits-badge">{credits}</div>
-          </div>
+      {/* Overlay - Click to close */}
+      {isOpen && <div className="sidebar-overlay" onClick={closeSidebar}></div>}
 
-          <nav className="sidebar-nav">
-            <Link to="/home" className="sidebar-link">
-              <span className="sidebar-icon">🏠</span>
-              Home
-            </Link>
-            <Link to="/history" className="sidebar-link">
-              <span className="sidebar-icon">📜</span>
-              Verification History
-            </Link>
-            <Link to="/profile" className="sidebar-link">
-              <span className="sidebar-icon">👤</span>
-              Profile
-            </Link>
-          </nav>
-
-          <button className="sidebar-logout" onClick={handleLogout}>
-            <span className="sidebar-icon">🚪</span>
-            Logout
+      {/* Sidebar */}
+      <div className={`sidebar ${isOpen ? "open" : "closed"}`}>
+        <div className="sidebar-header">
+          <img src={logo} alt="Asure Logo" className="sidebar-logo" />
+          <button className="sidebar-close" onClick={closeSidebar}>
+            ✕
           </button>
         </div>
-      )}
-    </div>
+
+        {isOpen && (
+          <div className="sidebar-content">
+            <div className="sidebar-credits">
+              <h6>Verification Credits</h6>
+              <div className="credits-badge">{creditsRemaining}</div>
+            </div>
+
+            <nav className="sidebar-nav">
+              <Link to="/home" className="sidebar-link" onClick={closeSidebar}>
+                <span className="sidebar-icon">🏠</span>
+                Home
+              </Link>
+              <Link
+                to="/history"
+                className="sidebar-link"
+                onClick={closeSidebar}
+              >
+                <span className="sidebar-icon">📜</span>
+                Verification History
+              </Link>
+              <Link
+                to="/profile"
+                className="sidebar-link"
+                onClick={closeSidebar}
+              >
+                <span className="sidebar-icon">👤</span>
+                Profile
+              </Link>
+            </nav>
+
+            <button className="sidebar-logout" onClick={handleLogout}>
+              <span className="sidebar-icon">🚪</span>
+              Logout
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

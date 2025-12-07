@@ -17,6 +17,8 @@ const EnterMedicine: React.FC = () => {
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     medicineName: "",
@@ -61,6 +63,33 @@ const EnterMedicine: React.FC = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAiAnalyze = async () => {
+    if (!imagePreview) return;
+    setAiLoading(true);
+    setAiAnalysis(null);
+    try {
+      const token = localStorage.getItem("asure_token");
+      const res = await fetch("http://localhost:4000/api/ai/analyze-medicine", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ image: imagePreview }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.analysis) {
+        setAiAnalysis(data.data.analysis);
+      } else {
+        setAiAnalysis("AI could not analyze this medicine image.");
+      }
+    } catch (err) {
+      setAiAnalysis("Network or AI service error during analysis.");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -298,9 +327,26 @@ const EnterMedicine: React.FC = () => {
                     alt="Preview"
                     className="image-preview"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary w-100 mt-3"
+                    disabled={aiLoading}
+                    onClick={handleAiAnalyze}
+                  >
+                    {aiLoading ? "Analyzing with AI..." : "🔍 Verify with AI"}
+                  </button>
                 </div>
               )}
             </div>
+
+            {aiAnalysis && (
+              <div
+                className="alert alert-info"
+                style={{ whiteSpace: "pre-wrap" }}
+              >
+                <strong>AI Analysis:</strong>\n{aiAnalysis}
+              </div>
+            )}
 
             <button
               type="submit"

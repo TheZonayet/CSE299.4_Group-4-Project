@@ -27,6 +27,8 @@ const VerifyEducation: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VerificationResult | null>(null);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,12 +57,30 @@ const VerifyEducation: React.FC = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("asure_token")}`,
           },
-          body: JSON.stringify({ rollNumber: roll, instituteId: id }),
+          body: JSON.stringify({ rollNumber: roll, idNumber: id }),
         }
       );
 
       const result = await response.json();
-      if (result.success && result.data) {
+      console.log(
+        "Education verification response:",
+        result,
+        "status:",
+        response.status
+      );
+
+      // Handle error responses
+      if (response.status === 403) {
+        setResult({
+          isAuthentic: false,
+          message: result.error || "Insufficient credits",
+        });
+      } else if (response.status === 401) {
+        setResult({
+          isAuthentic: false,
+          message: "Authentication failed. Please log in again.",
+        });
+      } else if (result.success && result.data) {
         setResult({
           isAuthentic: result.data.isAuthentic,
           instituteName: result.data.instituteName,
@@ -71,11 +91,17 @@ const VerifyEducation: React.FC = () => {
           grade: result.data.cgpa,
         });
       } else {
-        setResult({ isAuthentic: false });
+        setResult({
+          isAuthentic: false,
+          message: result.message || "Certificate not found",
+        });
       }
     } catch (error) {
       console.error("Verification error:", error);
-      setResult({ isAuthentic: false });
+      setResult({
+        isAuthentic: false,
+        message: "Network error. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -112,16 +138,33 @@ const VerifyEducation: React.FC = () => {
 
         const aiResult = await response.json();
         if (aiResult.success && aiResult.data.analysis) {
+          const fullText = aiResult.data.analysis;
           setResult({
             isAuthentic: true,
             studentName: "AI Analysis",
-            message: aiResult.data.analysis,
+            message: fullText,
             aiAnalysis: aiResult.data,
           });
+
+          // Typewriter effect
+          setDisplayedText("");
+          setIsTyping(true);
+          let currentIndex = 0;
+          const typingInterval = setInterval(() => {
+            if (currentIndex < fullText.length) {
+              setDisplayedText(fullText.substring(0, currentIndex + 1));
+              currentIndex++;
+            } else {
+              setIsTyping(false);
+              clearInterval(typingInterval);
+            }
+          }, 20);
         } else {
           setResult({
             isAuthentic: false,
-            message: aiResult.data?.analysis || "Could not read certificate information",
+            message:
+              aiResult.data?.analysis ||
+              "Could not read certificate information",
           });
         }
         setLoading(false);
@@ -197,7 +240,7 @@ const VerifyEducation: React.FC = () => {
                     value={id}
                     onChange={(e) => setId(e.target.value)}
                     placeholder="Enter ID number"
-                    required
+                    required={false}
                   />
                 </div>
                 <button type="submit" className="verify-btn" disabled={loading}>
@@ -253,18 +296,25 @@ const VerifyEducation: React.FC = () => {
                       >
                         ✕ Remove
                       </button>
+                      <button
+                        type="submit"
+                        className="verify-btn"
+                        disabled={loading}
+                        style={{
+                          marginTop: 8,
+                          width: "100%",
+                          padding: "15px",
+                          fontSize: "18px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {loading
+                          ? "🔄 AI is analyzing..."
+                          : "✅ Verify with AI"}
+                      </button>
                     </div>
                   )}
                 </div>
-                {uploadedImage && (
-                  <button
-                    type="submit"
-                    className="verify-btn"
-                    disabled={loading}
-                  >
-                    {loading ? "AI is analyzing..." : "Verify with AI"}
-                  </button>
-                )}
               </form>
             </div>
           )}
@@ -291,17 +341,27 @@ const VerifyEducation: React.FC = () => {
                   {result.message && (
                     <div className="ai-analysis-text">
                       <h4>AI Certificate Analysis:</h4>
-                      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                        {result.message}
+                      <pre
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          fontFamily: "inherit",
+                          color: "#000",
+                          lineHeight: "1.6",
+                        }}
+                      >
+                        {displayedText}
+                        {isTyping && <span className="typing-cursor">|</span>}
                       </pre>
                     </div>
                   )}
-                  
+
                   {result.studentName && !result.message && (
                     <>
                       <div className="detail-row">
                         <span className="detail-label">Student Name:</span>
-                        <span className="detail-value">{result.studentName}</span>
+                        <span className="detail-value">
+                          {result.studentName}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Roll Number:</span>
@@ -313,15 +373,21 @@ const VerifyEducation: React.FC = () => {
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Institute:</span>
-                        <span className="detail-value">{result.instituteName}</span>
+                        <span className="detail-value">
+                          {result.instituteName}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">EIIN Number:</span>
-                        <span className="detail-value">{result.eiinNumber}</span>
+                        <span className="detail-value">
+                          {result.eiinNumber}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Grade:</span>
-                        <span className="detail-value grade">{result.grade}</span>
+                        <span className="detail-value grade">
+                          {result.grade}
+                        </span>
                       </div>
 
                       {result.gradeDetails && (
@@ -332,7 +398,8 @@ const VerifyEducation: React.FC = () => {
                               <strong>GPA:</strong> {result.gradeDetails.gpa}
                             </p>
                             <p>
-                              <strong>Grade:</strong> {result.gradeDetails.grade}
+                              <strong>Grade:</strong>{" "}
+                              {result.gradeDetails.grade}
                             </p>
                             <p>
                               <strong>Remarks:</strong>{" "}
