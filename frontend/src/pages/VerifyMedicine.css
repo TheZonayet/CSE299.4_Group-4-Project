@@ -80,7 +80,14 @@
 
 .ai-suggestion h3 {
   color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.suggestion-timestamp {
+  font-size: 0.875rem;
+  color: #999;
   margin-bottom: 1rem;
+  font-style: italic;
 }
 
 .suggestion-section {

@@ -81,13 +81,26 @@ const EnterMedicine: React.FC = () => {
         body: JSON.stringify({ image: imagePreview }),
       });
       const data = await res.json();
-      if (data.success && data.data?.analysis) {
-        setAiAnalysis(data.data.analysis);
+
+      console.log("Medicine Analysis Response:", data);
+
+      if (res.ok && data.success) {
+        // Backend returns { analysis: text, timestamp }
+        const analysisText = data.data?.analysis || data.data;
+        setAiAnalysis(analysisText);
       } else {
-        setAiAnalysis("AI could not analyze this medicine image.");
+        const errorMsg =
+          data.message ||
+          data.error ||
+          "AI could not analyze this medicine image.";
+        console.error("AI Analysis Error:", errorMsg);
+        setAiAnalysis(`Error: ${errorMsg}`);
       }
-    } catch (err) {
-      setAiAnalysis("Network or AI service error during analysis.");
+    } catch (err: any) {
+      console.error("Network error during AI analysis:", err);
+      setAiAnalysis(
+        `Network error: ${err.message || "Failed to connect to AI service"}`
+      );
     } finally {
       setAiLoading(false);
     }
