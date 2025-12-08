@@ -238,15 +238,26 @@ const VerifyMedicine: React.FC = () => {
       const result = await response.json();
       console.log("AI Response:", result);
       if (result.success && result.data) {
-        const suggestionText = result.data.suggestion || result.data;
-        setAiSuggestion(result.data);
+        // Extract suggestion text from the response
+        const suggestionText =
+          result.data.suggestion ||
+          result.data.text ||
+          JSON.stringify(result.data);
+
+        // Ensure timestamp is set
+        const suggestionWithTimestamp = {
+          ...result.data,
+          suggestion: suggestionText,
+          timestamp: result.data.timestamp || new Date().toISOString(),
+        };
+        setAiSuggestion(suggestionWithTimestamp);
 
         // Typewriter effect for suggestion
         setDisplayedSuggestion("");
         setIsTypingSuggestion(true);
         let idx = 0;
         const interval = setInterval(() => {
-          if (idx < suggestionText.length) {
+          if (suggestionText && idx < suggestionText.length) {
             setDisplayedSuggestion(suggestionText.substring(0, idx + 1));
             idx++;
           } else {

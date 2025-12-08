@@ -22,6 +22,11 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     getProfile()
       .then((data) => {
+        console.log("Profile loaded:", data.user);
+        console.log(
+          "Profile picture from backend:",
+          data.user.profile?.profilePicture ? "EXISTS" : "NULL"
+        );
         updateUser(data.user);
         setFormData(data.user.profile || {});
         setProfilePicture(data.user.profile?.profilePicture || null);
