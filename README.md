@@ -766,10 +766,11 @@ mysql -u root -e "USE asure_verification_db; SHOW TABLES;"
 
 ## 👥 Team
 
-**Course:** CSE299.4 - Advanced Software Engineering  
+**Course:** CSE299.4  
 **Group:** Group 4  
 **Semester:** Spring 2025  
-**Institution:** [Your University]
+**Institution:** North South University
+
 
 ---
 
